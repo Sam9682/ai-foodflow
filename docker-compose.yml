@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://foodflow:password@db:5432/foodflow
+      - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - UBER_EATS_CLIENT_ID=${UBER_EATS_CLIENT_ID}
+      - UBER_EATS_CLIENT_SECRET=${UBER_EATS_CLIENT_SECRET}
+      - UBER_EATS_STORE_ID=${UBER_EATS_STORE_ID}
+      - DELIVEROO_API_KEY=${DELIVEROO_API_KEY}
+      - DELIVEROO_RESTAURANT_ID=${DELIVEROO_RESTAURANT_ID}
+      - JUST_EAT_API_KEY=${JUST_EAT_API_KEY}
+      - JUST_EAT_TENANT_ID=${JUST_EAT_TENANT_ID}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=foodflow
+      - POSTGRES_USER=foodflow
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  scheduler:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://foodflow:password@db:5432/foodflow
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
+    command: python -c "from app.services.scheduler import scheduler; scheduler.start()"
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    environment:
+      - DATABASE_URL=postgresql://foodflow:password@db:5432/foodflow
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - UBER_EATS_CLIENT_ID=${UBER_EATS_CLIENT_ID}
+      - UBER_EATS_CLIENT_SECRET=${UBER_EATS_CLIENT_SECRET}
+      - UBER_EATS_STORE_ID=${UBER_EATS_STORE_ID}
+      - DELIVEROO_API_KEY=${DELIVEROO_API_KEY}
+      - DELIVEROO_RESTAURANT_ID=${DELIVEROO_RESTAURANT_ID}
+      - JUST_EAT_API_KEY=${JUST_EAT_API_KEY}
+      - JUST_EAT_TENANT_ID=${JUST_EAT_TENANT_ID}
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "foodflow": {
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "cwd": ".",
+      "env": {
+        "DATABASE_URL": "postgresql://foodflow:password@localhost:5432/foodflow"
+      }
+    }
+  }
+}
