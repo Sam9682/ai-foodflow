@@ -61,42 +61,83 @@ Parameters:
 
 ## Setup Instructions
 
-### 1. Install MCP Dependencies
+### 🚀 Quick Start with Deploy Script
 ```bash
-pip install mcp==1.0.0
+# Automated deployment (includes MCP server)
+./deploy.sh docker   # Docker deployment with MCP service
+./deploy.sh          # Manual deployment
+```
+
+### 1. Install Dependencies
+```bash
+# Install all dependencies (including MCP)
+pip install -r requirements.txt
 ```
 
 ### 2. Configure Environment
 ```bash
 # Copy and edit environment file
 cp .env.example .env
-# Add your API credentials
+# Add your API credentials and database URL
 ```
 
 ### 3. Start MCP Server
+
+**Docker Deployment (Recommended):**
+```bash
+# MCP server runs automatically in Docker
+docker-compose up -d mcp-server
+```
+
+**Manual Deployment:**
 ```bash
 # Option 1: Direct start
 python mcp_server.py
 
 # Option 2: With environment loader
 python start_mcp.py
+
+# Option 3: Via deploy script
+./deploy.sh  # Includes MCP server setup
 ```
 
 ### 4. Configure AI Client
-Add to your AI client's MCP configuration:
+
+**For Docker Deployment:**
+```json
+{
+  "mcpServers": {
+    "foodflow": {
+      "command": "docker",
+      "args": ["exec", "-i", "ai-foodflow-mcp-server-1", "python", "start_mcp.py"],
+      "cwd": "/path/to/ai-foodflow"
+    }
+  }
+}
+```
+
+**For Manual Deployment:**
 ```json
 {
   "mcpServers": {
     "foodflow": {
       "command": "python",
-      "args": ["mcp_server.py"],
-      "cwd": "/path/to/FoodFlow",
+      "args": ["start_mcp.py"],
+      "cwd": "/path/to/ai-foodflow",
       "env": {
-        "DATABASE_URL": "postgresql://foodflow:password@localhost:5432/foodflow"
+        "DATABASE_URL": "postgresql://foodflow:password@localhost:5432/foodflow",
+        "OPENAI_API_KEY": "your_openai_api_key"
       }
     }
   }
 }
+```
+
+**Alternative Configuration (using mcp_config.json):**
+```bash
+# Copy the provided configuration
+cp mcp_config.json ~/.config/ai-client/mcp_servers.json
+# Edit paths and credentials as needed
 ```
 
 ## Usage Examples
@@ -149,11 +190,62 @@ Parameters: restaurant_id=1
 - **Custom AI Applications**: Any MCP-compatible system
 - **Development Tools**: IDEs with MCP support
 
+## Docker Integration
+
+FoodFlow includes a dedicated MCP server container:
+
+**Docker Services:**
+- `mcp-server`: Dedicated MCP server container
+- `app`: Main FastAPI application
+- `db`: PostgreSQL database
+- `redis`: Redis cache
+
+**Container Features:**
+- Isolated MCP server environment
+- Shared database access with main app
+- Environment variable injection
+- Health checks and monitoring
+- Automatic restart on failure
+
+## Monitoring MCP Server
+
+```bash
+# Check MCP server status (Docker)
+docker-compose logs mcp-server
+docker-compose exec mcp-server python -c "print('MCP Server is running')"
+
+# Check MCP server status (Manual)
+ps aux | grep mcp_server
+tail -f logs/mcp_server.log
+```
+
 ## Security Notes
 
 - MCP server runs locally with database access
 - API credentials managed through secure config system
 - All operations logged in audit trail
 - Environment variables for sensitive data
+- Docker isolation for enhanced security
+- Network-level access controls
 
-The MCP integration makes FoodFlow accessible to any generative AI system, enabling natural language restaurant management and platform synchronization.
+## Troubleshooting
+
+**Common Issues:**
+- **Connection refused**: Ensure database is running and accessible
+- **Permission denied**: Check file permissions and Docker access
+- **Module not found**: Verify all dependencies are installed
+- **Database connection**: Check DATABASE_URL in environment
+
+**Debug Commands:**
+```bash
+# Test MCP server connection
+python -c "from mcp_server import app; print('MCP server imports successfully')"
+
+# Check database connection
+python -c "from app.core.database import engine; print('Database connected')"
+
+# Verify environment variables
+python -c "import os; print('DB:', os.getenv('DATABASE_URL'))"
+```
+
+The MCP integration makes FoodFlow accessible to any generative AI system, enabling natural language restaurant management and platform synchronization with enterprise-grade deployment options.
