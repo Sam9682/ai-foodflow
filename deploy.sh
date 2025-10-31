@@ -62,8 +62,11 @@ if [ ! -f .env ]; then
     fi
 fi
 
+# Set default deployment method to manual if no parameter provided
+DEPLOY_METHOD="${1:-manual}"
+
 # Check deployment method
-if [ "$1" = "docker" ] || [ -f docker-compose.yml ]; then
+if [ "$DEPLOY_METHOD" = "docker" ]; then
     echo "🐳 Starting Docker deployment..."
     
     # Start services
@@ -80,9 +83,10 @@ if [ "$1" = "docker" ] || [ -f docker-compose.yml ]; then
     echo "✅ Docker deployment complete!"
     echo ""
     echo "🌐 Access Points:"
+    echo "   • Main Dashboard: http://localhost:8000/main"
     echo "   • API Documentation: http://localhost:8000/docs"
     echo "   • Health Check: http://localhost:8000/health"
-    echo "   • Chat Interface: Open chat_demo.html in browser"
+    echo "   • Chat Interface: http://localhost:8000/static/chat_demo.html"
     echo "   • Prometheus: http://localhost:9090"
     echo "   • Grafana: http://localhost:3000 (admin/admin)"
     echo ""
@@ -100,15 +104,18 @@ else
     
     # Initialize database
     echo "🗄️ Initializing database..."
+    export PYTHONPATH="$(pwd):$PYTHONPATH"
     python scripts/init_data.py
     
     # Start API server in background
     echo "🚀 Starting API server..."
+    export PYTHONPATH="$(pwd):$PYTHONPATH"
     uvicorn app.api.main:app --host 0.0.0.0 --port 8000 &
     API_PID=$!
     
     # Start scheduler in background
     echo "⏰ Starting scheduler..."
+    export PYTHONPATH="$(pwd):$PYTHONPATH"
     python -c "from app.services.scheduler import scheduler; scheduler.start()" &
     SCHEDULER_PID=$!
     
@@ -119,9 +126,10 @@ else
     echo "✅ Manual deployment complete!"
     echo ""
     echo "🌐 Access Points:"
+    echo "   • Main Dashboard: http://localhost:8000/main"
     echo "   • API Documentation: http://localhost:8000/docs"
     echo "   • Health Check: http://localhost:8000/health"
-    echo "   • Chat Interface: Open chat_demo.html in browser"
+    echo "   • Chat Interface: http://localhost:8000/static/chat_demo.html"
     echo ""
     echo "📖 Next Steps:"
     echo "   • Check USER_GUIDE.md for usage instructions"

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodFlow - Restaurant Management Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; color: white; margin-bottom: 40px; }
+        .header h1 { font-size: 3rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .card { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
+        .card-icon { font-size: 3rem; margin-bottom: 15px; }
+        .card h3 { color: #333; margin-bottom: 15px; font-size: 1.5rem; }
+        .card p { color: #666; margin-bottom: 20px; line-height: 1.6; }
+        .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 25px; transition: background 0.3s ease; font-weight: 500; }
+        .btn:hover { background: #5a6fd8; }
+        .btn-secondary { background: #28a745; }
+        .btn-secondary:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-warning:hover { background: #e0a800; }
+        .status-bar { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 20px; margin-bottom: 30px; }
+        .status-item { display: inline-block; margin-right: 30px; color: white; }
+        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+        .status-online { background: #28a745; }
+        .status-offline { background: #dc3545; }
+        .footer { text-align: center; color: rgba(255,255,255,0.8); margin-top: 40px; }
+        .quick-actions { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; margin-bottom: 30px; }
+        .quick-actions h3 { color: white; margin-bottom: 15px; }
+        .action-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
+        .action-btn { padding: 10px 20px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 20px; cursor: pointer; transition: background 0.3s ease; }
+        .action-btn:hover { background: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ FoodFlow</h1>
+            <p>Multi-Platform Restaurant Sync System for Le Bouzou</p>
+        </div>
+
+        <div class="status-bar" id="statusBar">
+            <div class="status-item">
+                <span class="status-dot status-offline" id="apiStatus"></span>
+                API Status: <span id="apiStatusText">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot status-offline" id="dbStatus"></span>
+                Database: <span id="dbStatusText">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot status-offline" id="syncStatus"></span>
+                Last Sync: <span id="syncStatusText">Checking...</span>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h3>⚡ Quick Actions</h3>
+            <div class="action-buttons">
+                <button class="action-btn" onclick="syncAllPlatforms()">🔄 Sync All Platforms</button>
+                <button class="action-btn" onclick="checkSyncStatus()">📊 Check Sync Status</button>
+                <button class="action-btn" onclick="viewMenu()">📋 View Menu</button>
+                <button class="action-btn" onclick="openChat()">💬 Open AI Chat</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-icon">💬</div>
+                <h3>AI Chat Interface</h3>
+                <p>Interact with AI assistant for menu management, image analysis, and platform synchronization using natural language.</p>
+                <a href="/static/chat_demo.html" class="btn" target="_blank">Open Chat Interface</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">📚</div>
+                <h3>API Documentation</h3>
+                <p>Complete REST API documentation with interactive testing interface for all endpoints and operations.</p>
+                <a href="/docs" class="btn btn-secondary" target="_blank">View API Docs</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">🍽️</div>
+                <h3>Menu Management</h3>
+                <p>Add, update, and manage menu items with prices, descriptions, and categories for Le Bouzou restaurant.</p>
+                <a href="#" class="btn" onclick="openMenuManager()">Manage Menu</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">🔄</div>
+                <h3>Platform Sync</h3>
+                <p>Synchronize menu data across Uber Eats, Deliveroo, and Just Eat platforms with real-time status monitoring.</p>
+                <a href="#" class="btn btn-warning" onclick="openSyncManager()">Sync Platforms</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">📊</div>
+                <h3>Monitoring Dashboard</h3>
+                <p>View system metrics, performance data, and operational insights with Prometheus and Grafana integration.</p>
+                <a href="http://localhost:3000" class="btn" target="_blank">Open Grafana</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">🔧</div>
+                <h3>Configuration</h3>
+                <p>Manage API credentials, platform settings, and system configuration with secure credential storage.</p>
+                <a href="#" class="btn" onclick="openConfig()">Configure Settings</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">📈</div>
+                <h3>Analytics & Audit</h3>
+                <p>Track sync history, performance statistics, and audit trail of all platform operations and changes.</p>
+                <a href="/audit-page" class="btn" target="_blank">View Audit Records</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">🤖</div>
+                <h3>MCP Integration</h3>
+                <p>Connect with AI clients like Claude and ChatGPT using Model Context Protocol for natural language management.</p>
+                <a href="/static/README_MCP.md" class="btn" target="_blank">Setup MCP</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2024 FoodFlow - Le Bouzou Restaurant Management System</p>
+            <p>Montpellier/Castelnau-le-Lez • Contact: lepetre@yahoo.fr</p>
+        </div>
+    </div>
+
+    <script>
+        // Check system status on load
+        window.onload = function() {
+            checkSystemStatus();
+        };
+
+        async function checkSystemStatus() {
+            try {
+                // Check API health
+                const healthResponse = await fetch('/health');
+                if (healthResponse.ok) {
+                    updateStatus('api', true, 'Online');
+                } else {
+                    updateStatus('api', false, 'Error');
+                }
+
+                // Check config status (database)
+                const configResponse = await fetch('/config/status');
+                if (configResponse.ok) {
+                    updateStatus('db', true, 'Connected');
+                } else {
+                    updateStatus('db', false, 'Disconnected');
+                }
+
+                // Check sync status
+                const syncResponse = await fetch('/sync/status/1');
+                if (syncResponse.ok) {
+                    const syncData = await syncResponse.json();
+                    const lastSync = new Date(syncData.last_sync || Date.now()).toLocaleString();
+                    updateStatus('sync', true, lastSync);
+                } else {
+                    updateStatus('sync', false, 'Unknown');
+                }
+            } catch (error) {
+                updateStatus('api', false, 'Offline');
+                updateStatus('db', false, 'Error');
+                updateStatus('sync', false, 'Error');
+            }
+        }
+
+        function updateStatus(type, isOnline, text) {
+            const dot = document.getElementById(type + 'Status');
+            const textEl = document.getElementById(type + 'StatusText');
+            
+            dot.className = `status-dot ${isOnline ? 'status-online' : 'status-offline'}`;
+            textEl.textContent = text;
+        }
+
+        async function syncAllPlatforms() {
+            try {
+                const response = await fetch('/sync/manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ restaurant_id: 1, platforms: ['uber_eats', 'deliveroo', 'just_eat'] })
+                });
+                
+                if (response.ok) {
+                    alert('✅ Sync initiated successfully! Check sync status for results.');
+                    setTimeout(checkSystemStatus, 2000);
+                } else {
+                    alert('❌ Sync failed. Please check your configuration.');
+                }
+            } catch (error) {
+                alert('❌ Error initiating sync: ' + error.message);
+            }
+        }
+
+        async function checkSyncStatus() {
+            try {
+                const response = await fetch('/sync/status/1');
+                const data = await response.json();
+                
+                let statusText = 'Sync Status:\\n\\n';
+                Object.entries(data.platforms || {}).forEach(([platform, status]) => {
+                    statusText += `${platform}: ${status.success ? '✅ Success' : '❌ Failed'}\\n`;
+                });
+                
+                alert(statusText);
+            } catch (error) {
+                alert('❌ Error checking sync status: ' + error.message);
+            }
+        }
+
+        async function viewMenu() {
+            try {
+                const response = await fetch('/menu-items/1');
+                const items = await response.json();
+                
+                let menuText = 'Le Bouzou Menu:\\n\\n';
+                items.forEach(item => {
+                    menuText += `${item.name} - €${item.price}\\n`;
+                    if (item.description) menuText += `  ${item.description}\\n`;
+                    menuText += '\\n';
+                });
+                
+                alert(menuText);
+            } catch (error) {
+                alert('❌ Error loading menu: ' + error.message);
+            }
+        }
+
+        function openChat() {
+            window.open('/static/chat_demo.html', '_blank');
+        }
+
+        function openMenuManager() {
+            window.open('/docs#/Menu%20Management', '_blank');
+        }
+
+        function openSyncManager() {
+            window.open('/docs#/Synchronization', '_blank');
+        }
+
+        function openConfig() {
+            window.open('/docs#/Configuration%20Management', '_blank');
+        }
+
+        function openAudit() {
+            window.open('/docs#/Audit%20%26%20Monitoring', '_blank');
+        }
+    </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.database import get_db, create_tables
@@ -17,6 +18,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="FoodFlow - Restaurant Sync Platform", version="1.0.0")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="."), name="static")
 
 # Include routers
 app.include_router(chat_router)
@@ -64,6 +68,16 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {"message": "FoodFlow Restaurant Sync Platform", "status": "running"}
+
+@app.get("/main")
+async def main_dashboard():
+    """Serve the main FoodFlow dashboard"""
+    return FileResponse("main_ai_foodflow.html")
+
+@app.get("/audit-page")
+async def audit_page():
+    """Serve the audit records page"""
+    return FileResponse("audit_page.html")
 
 @app.post("/restaurants/")
 async def create_restaurant(restaurant: RestaurantCreate, db: Session = Depends(get_db)):
