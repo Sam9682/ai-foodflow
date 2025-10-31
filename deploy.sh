@@ -40,7 +40,147 @@ fi
 echo "🚀 FoodFlow Platform Deployment Script"
 echo "======================================"
 
-# Check if .env exists
+# Handle special commands first
+if [ "$1" = "stop" ]; then
+    echo "🛑 Stopping FoodFlow services..."
+    
+    if [ -f docker-compose.yml ]; then
+        docker-compose down
+        echo "✅ Docker services stopped"
+    fi
+    
+    if [ -f api.pid ]; then
+        kill $(cat api.pid) 2>/dev/null || true
+        rm -f api.pid
+        echo "✅ API server stopped"
+    fi
+    
+    if [ -f scheduler.pid ]; then
+        kill $(cat scheduler.pid) 2>/dev/null || true
+        rm -f scheduler.pid
+        echo "✅ Scheduler stopped"
+    fi
+    
+    echo "🎉 All services stopped"
+    exit 0
+fi
+
+if [ "$1" = "status" ]; then
+    echo "📊 FoodFlow Application Status"
+    echo "=============================="
+    
+    # Check Docker vs Manual deployment
+    if [ -f docker-compose.yml ] && docker-compose ps | grep -q "Up"; then
+        echo "🐳 Docker Services:"
+        docker-compose ps
+        echo ""
+    else
+        echo "🔧 Manual Services:"
+        if [ -f api.pid ] && kill -0 $(cat api.pid) 2>/dev/null; then
+            echo "   ✅ API Server: Running (PID: $(cat api.pid))"
+        else
+            echo "   ❌ API Server: Not running"
+        fi
+        
+        if [ -f scheduler.pid ] && kill -0 $(cat scheduler.pid) 2>/dev/null; then
+            echo "   ✅ Scheduler: Running (PID: $(cat scheduler.pid))"
+        else
+            echo "   ❌ Scheduler: Not running"
+        fi
+        echo ""
+    fi
+    
+    # Test API Health
+    echo "🌐 API Health Tests:"
+    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+        echo "   ✅ Health Endpoint: Responding"
+        
+        # Test main endpoints
+        if curl -s http://localhost:8000/main > /dev/null 2>&1; then
+            echo "   ✅ Main Dashboard: Accessible"
+        else
+            echo "   ❌ Main Dashboard: Not accessible"
+        fi
+        
+        if curl -s http://localhost:8000/docs > /dev/null 2>&1; then
+            echo "   ✅ API Documentation: Accessible"
+        else
+            echo "   ❌ API Documentation: Not accessible"
+        fi
+        
+        # Test database connection
+        if curl -s http://localhost:8000/config/status > /dev/null 2>&1; then
+            echo "   ✅ Database: Connected"
+        else
+            echo "   ❌ Database: Connection failed"
+        fi
+        
+        # Test menu API
+        if curl -s http://localhost:8000/menu-items/1 > /dev/null 2>&1; then
+            echo "   ✅ Menu API: Functional"
+        else
+            echo "   ❌ Menu API: Not responding"
+        fi
+        
+    else
+        echo "   ❌ API Server: Not responding"
+        echo "   ❌ All dependent services: Unavailable"
+    fi
+    
+    echo ""
+    echo "🔗 Service Ports:"
+    if netstat -tlnp 2>/dev/null | grep -q ":8000"; then
+        echo "   ✅ Port 8000 (API): In use"
+    else
+        echo "   ❌ Port 8000 (API): Not listening"
+    fi
+    
+    if netstat -tlnp 2>/dev/null | grep -q ":5432"; then
+        echo "   ✅ Port 5432 (PostgreSQL): In use"
+    else
+        echo "   ❌ Port 5432 (PostgreSQL): Not listening"
+    fi
+    
+    if netstat -tlnp 2>/dev/null | grep -q ":6379"; then
+        echo "   ✅ Port 6379 (Redis): In use"
+    else
+        echo "   ❌ Port 6379 (Redis): Not listening"
+    fi
+    
+    echo ""
+    echo "📋 Overall Status:"
+    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+        echo "   ✅ FoodFlow: RUNNING"
+        echo "   🌐 Access: http://localhost:8000/main"
+    else
+        echo "   ❌ FoodFlow: NOT RUNNING"
+        echo "   🔧 Run: ./deploy.sh to start services"
+    fi
+    
+    exit 0
+fi
+
+if [ "$1" = "logs" ]; then
+    echo "📋 FoodFlow Service Logs"
+    echo "======================="
+    
+    if [ -f docker-compose.yml ] && docker-compose ps | grep -q "Up"; then
+        echo "🐳 Docker Logs (last 50 lines):"
+        docker-compose logs --tail=50 app
+    else
+        echo "🔧 Manual Deployment Logs:"
+        if [ -f logs/app.log ]; then
+            echo "📄 API Server Logs (last 20 lines):"
+            tail -20 logs/app.log
+        else
+            echo "   ❌ No log files found"
+        fi
+    fi
+    
+    exit 0
+fi
+
+# Check if .env exists for deployment commands
 if [ ! -f .env ]; then
     echo "📋 Setting up environment..."
     if [ -f .env.example ]; then
@@ -66,7 +206,7 @@ fi
 DEPLOY_METHOD="${1:-manual}"
 
 # Check deployment method
-if [ "$DEPLOY_METHOD" = "docker" ]; then
+if [ "$DEPLOY_METHOD" = "start" ]; then
     echo "🐳 Starting Docker deployment..."
     
     # Start services
@@ -143,83 +283,7 @@ else
     echo "🛑 To stop: ./deploy.sh stop"
 fi
 
-# Handle additional commands
-if [ "$1" = "stop" ]; then
-    echo "🛑 Stopping FoodFlow services..."
-    
-    if [ -f docker-compose.yml ]; then
-        docker-compose down
-        echo "✅ Docker services stopped"
-    fi
-    
-    if [ -f api.pid ]; then
-        kill $(cat api.pid) 2>/dev/null || true
-        rm -f api.pid
-        echo "✅ API server stopped"
-    fi
-    
-    if [ -f scheduler.pid ]; then
-        kill $(cat scheduler.pid) 2>/dev/null || true
-        rm -f scheduler.pid
-        echo "✅ Scheduler stopped"
-    fi
-    
-    echo "🎉 All services stopped"
-    exit 0
-fi
 
-if [ "$1" = "status" ]; then
-    echo "📊 FoodFlow Service Status"
-    echo "========================"
-    
-    if [ -f docker-compose.yml ] && docker-compose ps | grep -q "Up"; then
-        echo "🐳 Docker Services:"
-        docker-compose ps
-    else
-        echo "🔧 Manual Services:"
-        if [ -f api.pid ] && kill -0 $(cat api.pid) 2>/dev/null; then
-            echo "   ✅ API Server: Running (PID: $(cat api.pid))"
-        else
-            echo "   ❌ API Server: Not running"
-        fi
-        
-        if [ -f scheduler.pid ] && kill -0 $(cat scheduler.pid) 2>/dev/null; then
-            echo "   ✅ Scheduler: Running (PID: $(cat scheduler.pid))"
-        else
-            echo "   ❌ Scheduler: Not running"
-        fi
-    fi
-    
-    echo ""
-    echo "🌐 Health Check:"
-    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
-        echo "   ✅ API: Healthy"
-    else
-        echo "   ❌ API: Not responding"
-    fi
-    
-    exit 0
-fi
-
-if [ "$1" = "logs" ]; then
-    echo "📋 FoodFlow Service Logs"
-    echo "======================="
-    
-    if [ -f docker-compose.yml ] && docker-compose ps | grep -q "Up"; then
-        echo "🐳 Docker Logs (last 50 lines):"
-        docker-compose logs --tail=50 app
-    else
-        echo "🔧 Manual Deployment Logs:"
-        if [ -f logs/app.log ]; then
-            echo "📄 API Server Logs (last 20 lines):"
-            tail -20 logs/app.log
-        else
-            echo "   ❌ No log files found"
-        fi
-    fi
-    
-    exit 0
-fi
 
 echo ""
 echo "🎉 FoodFlow is now running!"

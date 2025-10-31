@@ -84,6 +84,11 @@ async def menu_management():
     """Serve the menu management page"""
     return FileResponse("menu_management.html")
 
+@app.get("/configuration")
+async def configuration_page():
+    """Serve the configuration management page"""
+    return FileResponse("configuration.html")
+
 @app.post("/restaurants/")
 async def create_restaurant(restaurant: RestaurantCreate, db: Session = Depends(get_db)):
     db_restaurant = Restaurant(**restaurant.dict())

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodFlow - Configuration</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .header h1 { font-size: 2rem; margin-bottom: 5px; }
+        .header p { opacity: 0.9; }
+        .back-btn { display: inline-block; margin: 20px 0; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .back-btn:hover { background: #5a6fd8; }
+        .section { background: white; padding: 25px; border-radius: 10px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section h3 { margin-bottom: 20px; color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .config-item { border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; background: #fafafa; }
+        .config-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .config-name { font-weight: bold; color: #333; font-size: 1.1rem; }
+        .config-status { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 500; }
+        .status-set { background: #d4edda; color: #155724; }
+        .status-empty { background: #f8d7da; color: #721c24; }
+        .config-value { margin: 10px 0; font-family: monospace; background: white; padding: 10px; border-radius: 4px; border: 1px solid #ddd; word-break: break-all; }
+        .config-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s; font-size: 0.9rem; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd8; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; margin: 5% auto; padding: 30px; border-radius: 10px; max-width: 500px; position: relative; }
+        .close { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999; }
+        .close:hover { color: #333; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #333; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        .form-group textarea { height: 80px; resize: vertical; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .alert { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .platform-section { margin-bottom: 30px; }
+        .add-config { background: #e8f5e8; border: 2px dashed #28a745; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; transition: background 0.3s; }
+        .add-config:hover { background: #d4edda; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🔧 Configuration Management</h1>
+            <p>Manage API credentials and platform settings for FoodFlow</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <a href="/main" class="back-btn">← Back to Dashboard</a>
+
+        <div id="alertContainer"></div>
+
+        <div class="section">
+            <h3>🔑 Platform API Credentials</h3>
+            <div id="loading" class="loading">Loading configuration...</div>
+            <div id="configContainer" style="display: none;">
+                
+                <div class="platform-section">
+                    <h4>Uber Eats</h4>
+                    <div class="config-grid" id="uberEatsConfig"></div>
+                </div>
+
+                <div class="platform-section">
+                    <h4>Deliveroo</h4>
+                    <div class="config-grid" id="deliverooConfig"></div>
+                </div>
+
+                <div class="platform-section">
+                    <h4>Just Eat</h4>
+                    <div class="config-grid" id="justEatConfig"></div>
+                </div>
+
+                <div class="platform-section">
+                    <h4>System Settings</h4>
+                    <div class="config-grid" id="systemConfig"></div>
+                </div>
+
+                <div class="add-config" onclick="openAddModal()">
+                    <h4>+ Add New Configuration</h4>
+                    <p>Add a new API credential or system parameter</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Add Modal -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle">Edit Configuration</h3>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="configKey">Configuration Key *</label>
+                    <input type="text" id="configKey" required placeholder="e.g., uber_eats_client_id">
+                </div>
+                <div class="form-group">
+                    <label for="configValue">Value *</label>
+                    <textarea id="configValue" required placeholder="Enter configuration value"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">Save Configuration</button>
+                    <button type="button" class="btn btn-danger" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentEditKey = null;
+        let allConfigs = {};
+
+        window.onload = function() {
+            loadConfigurations();
+        };
+
+        async function loadConfigurations() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('configContainer').style.display = 'none';
+
+            try {
+                const response = await fetch('/config/credentials');
+                const data = await response.json();
+                
+                allConfigs = data.credentials || {};
+                displayConfigurations();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('configContainer').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading configurations:', error);
+                document.getElementById('loading').innerHTML = '❌ Error loading configurations';
+            }
+        }
+
+        function displayConfigurations() {
+            const platforms = {
+                uberEats: ['uber_eats_client_id', 'uber_eats_client_secret', 'uber_eats_store_id'],
+                deliveroo: ['deliveroo_api_key', 'deliveroo_restaurant_id'],
+                justEat: ['just_eat_api_key', 'just_eat_tenant_id'],
+                system: ['openai_api_key', 'secret_key', 'database_url', 'redis_url']
+            };
+
+            Object.entries(platforms).forEach(([platform, keys]) => {
+                const container = document.getElementById(platform + 'Config');
+                container.innerHTML = '';
+
+                keys.forEach(key => {
+                    const config = allConfigs[key];
+                    const configDiv = createConfigItem(key, config);
+                    container.appendChild(configDiv);
+                });
+            });
+        }
+
+        function createConfigItem(key, config) {
+            const div = document.createElement('div');
+            div.className = 'config-item';
+            
+            const isSet = config && config.value && config.value !== '';
+            const displayValue = isSet ? maskValue(config.value) : 'Not configured';
+            
+            div.innerHTML = `
+                <div class="config-header">
+                    <div class="config-name">${formatKeyName(key)}</div>
+                    <div class="config-status ${isSet ? 'status-set' : 'status-empty'}">
+                        ${isSet ? 'Configured' : 'Empty'}
+                    </div>
+                </div>
+                <div class="config-value">${displayValue}</div>
+                <div class="config-actions">
+                    <button class="btn btn-primary" onclick="editConfig('${key}')">
+                        ${isSet ? 'Update' : 'Set'}
+                    </button>
+                    ${isSet ? `<button class="btn btn-danger" onclick="deleteConfig('${key}')">Delete</button>` : ''}
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function formatKeyName(key) {
+            return key.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        function maskValue(value) {
+            if (!value) return 'Not set';
+            if (value.length <= 8) return '*'.repeat(value.length);
+            return value.substring(0, 4) + '*'.repeat(value.length - 8) + value.substring(value.length - 4);
+        }
+
+        function editConfig(key) {
+            currentEditKey = key;
+            document.getElementById('modalTitle').textContent = 'Edit Configuration';
+            document.getElementById('configKey').value = key;
+            document.getElementById('configKey').readOnly = true;
+            
+            const config = allConfigs[key];
+            document.getElementById('configValue').value = config ? config.value : '';
+            
+            document.getElementById('configModal').style.display = 'block';
+        }
+
+        function openAddModal() {
+            currentEditKey = null;
+            document.getElementById('modalTitle').textContent = 'Add New Configuration';
+            document.getElementById('configKey').value = '';
+            document.getElementById('configKey').readOnly = false;
+            document.getElementById('configValue').value = '';
+            document.getElementById('configModal').style.display = 'block';
+        }
+
+        async function deleteConfig(key) {
+            if (!confirm(`Are you sure you want to delete the configuration for "${formatKeyName(key)}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/config/credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [key]: '' })
+                });
+
+                if (response.ok) {
+                    showAlert('✅ Configuration deleted successfully', 'success');
+                    loadConfigurations();
+                } else {
+                    showAlert('❌ Error deleting configuration', 'danger');
+                }
+            } catch (error) {
+                showAlert('❌ Error deleting configuration: ' + error.message, 'danger');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('configModal').style.display = 'none';
+            currentEditKey = null;
+        }
+
+        document.getElementById('configForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const key = document.getElementById('configKey').value.trim();
+            const value = document.getElementById('configValue').value.trim();
+
+            if (!key || !value) {
+                showAlert('❌ Please fill in all fields', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch('/config/credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [key]: value })
+                });
+
+                if (response.ok) {
+                    showAlert('✅ Configuration saved successfully', 'success');
+                    closeModal();
+                    loadConfigurations();
+                } else {
+                    showAlert('❌ Error saving configuration', 'danger');
+                }
+            } catch (error) {
+                showAlert('❌ Error saving configuration: ' + error.message, 'danger');
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('configModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+    </script>
+</body>
+</html>
