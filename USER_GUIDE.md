@@ -5,17 +5,32 @@ Complete guide for using FoodFlow's AI-powered restaurant management system.
 ## 🎯 Overview
 
 FoodFlow provides multiple interfaces for managing your restaurant menu and syncing with delivery platforms:
+- **Main Dashboard**: Central hub for all platform functions
 - **Web Chat Interface**: Interactive AI assistant with image upload
+- **Menu Management**: Visual interface for CRUD operations on menu items
+- **Audit Records**: Complete audit trail with filtering and export
 - **REST API**: Programmatic access to all features
 - **MCP Integration**: Natural language commands via AI clients (Claude, ChatGPT)
 - **WebSocket**: Real-time communication
 
+## 🏠 Main Dashboard
+
+### Accessing the Dashboard
+1. Ensure FoodFlow is running (`./deploy.sh` or `./deploy.sh docker`)
+2. Navigate to http://localhost:8000/main
+3. Access all platform features from the central hub
+
+### Dashboard Features
+- **System Status**: Real-time API, database, and sync status
+- **Quick Actions**: One-click sync, status checks, menu view
+- **Feature Cards**: Direct access to all interfaces
+- **Navigation**: Links to chat, menu management, audit, and more
+
 ## 💬 Web Chat Interface
 
 ### Accessing the Chat Interface
-1. Ensure FoodFlow is running (`./deploy.sh` or `./deploy.sh docker`)
-2. Open `chat_demo.html` in your web browser
-3. Start chatting with the AI assistant
+1. From main dashboard or direct URL: http://localhost:8000/static/chat_discussion.html
+2. Start chatting with the AI assistant
 
 ### Chat Features
 
@@ -116,6 +131,11 @@ curl -X POST http://localhost:8000/sync/manual \
   }'
 ```
 
+**Delete Menu Item:**
+```bash
+curl -X DELETE http://localhost:8000/menu-items/5
+```
+
 **Upload Menu Image:**
 ```bash
 curl -X POST http://localhost:8000/chat/message-with-image \
@@ -123,6 +143,47 @@ curl -X POST http://localhost:8000/chat/message-with-image \
   -F "message=Analyze this menu" \
   -F "restaurant_id=1"
 ```
+
+## 🍽️ Menu Management Interface
+
+### Accessing Menu Management
+- **URL**: http://localhost:8000/menu-management
+- **From Dashboard**: Click "Menu Management" card
+
+### Features
+- **Visual Grid**: All menu items displayed in organized cards
+- **Add Items**: Modal form with validation
+- **Edit Items**: Click edit to modify existing items
+- **Delete Items**: Remove items with confirmation
+- **Categories**: Predefined categories (Pizzas, Salads, etc.)
+- **Availability**: Toggle item availability
+- **Real-time Updates**: Immediate UI updates
+
+### Usage
+1. **Add New Item**: Click "+ Add New Item" button
+2. **Fill Form**: Name, price, category, description, availability
+3. **Save**: Item appears immediately in grid
+4. **Edit**: Click "Edit" on any item card
+5. **Delete**: Click "Delete" with confirmation dialog
+
+## 📈 Audit Records Interface
+
+### Accessing Audit Records
+- **URL**: http://localhost:8000/audit-page
+- **From Dashboard**: Click "Analytics & Audit" card
+
+### Features
+- **Complete Audit Trail**: All system operations logged
+- **Filtering**: By action type, status, date range
+- **Statistics**: Success rates, error counts, daily activity
+- **Export**: Download filtered records as CSV
+- **Pagination**: Handle large datasets efficiently
+
+### Usage
+1. **View Records**: Automatic loading on page access
+2. **Filter Data**: Use dropdown filters and apply
+3. **Export Data**: Click "Export CSV" for reports
+4. **Navigate**: Use pagination for large datasets
 
 ### API Documentation
 Visit http://localhost:8000/docs for interactive API documentation.
@@ -373,10 +434,20 @@ curl -X PUT http://localhost:8000/restaurants/1 \
 
 ### Common Issues
 
+**Dashboard Not Loading:**
+1. Check API server: `curl http://localhost:8000/health`
+2. Verify main dashboard: `curl http://localhost:8000/main`
+3. Restart services: `./deploy.sh stop && ./deploy.sh`
+
 **Chat Not Responding:**
 1. Check WebSocket connection in browser console
 2. Verify API server is running: `curl http://localhost:8000/health`
 3. Restart services: `./deploy.sh stop && ./deploy.sh`
+
+**Menu Management Issues:**
+1. Check API endpoints: `curl http://localhost:8000/menu-items/1`
+2. Verify database connection
+3. Check browser console for JavaScript errors
 
 **Image Upload Failed:**
 1. Check image size (max 10MB)
@@ -413,6 +484,7 @@ curl -X POST http://localhost:8000/chat/message \
 ## 📞 Support & Resources
 
 ### Getting Help
+- **Main Dashboard**: http://localhost:8000/main
 - **Documentation**: README.md, DEPLOYMENT_GUIDE.md
 - **API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
@@ -433,11 +505,12 @@ curl -X POST http://localhost:8000/chat/message \
 
 ## 🎉 Success Tips
 
-1. **Start Simple**: Begin with basic menu management
-2. **Use Images**: Upload clear, high-quality menu photos
-3. **Regular Sync**: Keep platforms updated daily
-4. **Monitor Results**: Check sync status and fix issues
-5. **Leverage AI**: Use natural language for complex operations
-6. **Stay Updated**: Keep FoodFlow updated to latest version
+1. **Start with Dashboard**: Use http://localhost:8000/main as your starting point
+2. **Menu Management**: Use the visual interface for easy menu updates
+3. **Use Images**: Upload clear, high-quality menu photos via chat
+4. **Regular Sync**: Keep platforms updated daily via dashboard
+5. **Monitor Results**: Check audit page for complete activity history
+6. **Leverage AI**: Use natural language for complex operations
+7. **Stay Updated**: Keep FoodFlow updated to latest version
 
 FoodFlow makes restaurant management simple and efficient. Start with the chat interface, explore the API, and integrate with your favorite AI tools for the best experience!

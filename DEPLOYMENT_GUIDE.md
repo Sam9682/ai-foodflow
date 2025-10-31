@@ -219,9 +219,12 @@ netstat -tlnp | grep :8000
 curl http://localhost:8000/restaurants/
 curl http://localhost:8000/menu-items/1
 
-# Test chat interface
-# Open chat_demo.html in browser
-# Navigate to http://localhost:8000/docs for API documentation
+# Test web interfaces
+# Main Dashboard: http://localhost:8000/main
+# Menu Management: http://localhost:8000/menu-management
+# Chat Interface: http://localhost:8000/static/chat_discussion.html
+# Audit Records: http://localhost:8000/audit-page
+# API Documentation: http://localhost:8000/docs
 ```
 
 ## 📊 Monitoring Setup
@@ -396,7 +399,10 @@ For deployment issues:
 
 - [ ] All services running (app, db, redis, scheduler)
 - [ ] Health check returns 200 OK
+- [ ] Main dashboard accessible (http://localhost:8000/main)
+- [ ] Menu management interface working
 - [ ] Chat interface accessible
+- [ ] Audit records page functional
 - [ ] API documentation available
 - [ ] MCP server responding (if using AI)
 - [ ] Monitoring dashboards accessible

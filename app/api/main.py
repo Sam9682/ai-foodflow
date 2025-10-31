@@ -79,6 +79,11 @@ async def audit_page():
     """Serve the audit records page"""
     return FileResponse("audit_page.html")
 
+@app.get("/menu-management")
+async def menu_management():
+    """Serve the menu management page"""
+    return FileResponse("menu_management.html")
+
 @app.post("/restaurants/")
 async def create_restaurant(restaurant: RestaurantCreate, db: Session = Depends(get_db)):
     db_restaurant = Restaurant(**restaurant.dict())
@@ -122,6 +127,16 @@ async def update_menu_item(item_id: int, item: MenuItemCreate, db: Session = Dep
     db.commit()
     db.refresh(db_item)
     return db_item
+
+@app.delete("/menu-items/{item_id}")
+async def delete_menu_item(item_id: int, db: Session = Depends(get_db)):
+    db_item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    
+    db.delete(db_item)
+    db.commit()
+    return {"message": "Menu item deleted successfully"}
 
 @app.post("/sync/manual")
 async def manual_sync(sync_request: SyncRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

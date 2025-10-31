@@ -124,6 +124,8 @@ kill $(cat api.pid scheduler.pid)
 - `POST /menu-items/` - Create menu item
 - `GET /menu-items/{restaurant_id}` - Get menu items
 - `PUT /menu-items/{item_id}` - Update menu item
+- `DELETE /menu-items/{item_id}` - Delete menu item
+- **Web Interface**: http://localhost:8000/menu-management
 
 ### MCP Tools (AI Integration)
 - `sync_to_platforms` - Sync menu to delivery platforms
@@ -138,7 +140,7 @@ kill $(cat api.pid scheduler.pid)
 - `POST /chat/message` - Send text message
 - `POST /chat/message-with-image` - Send message with image attachment
 - `POST /chat/add-items` - Add analyzed menu items
-- **Web Interface**: Open `chat_demo.html` in browser for interactive chat
+- **Web Interface**: http://localhost:8000/static/chat_discussion.html
 
 ### Configuration Management
 - `GET /config/credentials` - View API credentials (masked)
@@ -151,6 +153,7 @@ kill $(cat api.pid scheduler.pid)
 - `GET /health` - Health check
 - `POST /scheduler/start` - Start scheduler
 - `POST /scheduler/stop` - Stop scheduler
+- **Web Interface**: http://localhost:8000/audit-page
 
 ### Synchronization
 - `POST /sync/manual` - Trigger manual sync
@@ -235,11 +238,14 @@ python start_mcp.py
 - Custom AI applications
 - Any MCP-compatible system
 
-## AI Chat Interface
+## Web Interfaces
 
-Access the conversational AI interface:
-- **Web Chat Demo**: Open `chat_demo.html` in your browser
-- **WebSocket**: ws://localhost:8000/chat/ws/{restaurant_id}
+### Main Dashboard
+- **URL**: http://localhost:8000/main
+- **Features**: Central hub with system status, quick actions, and access to all features
+
+### AI Chat Interface
+- **URL**: http://localhost:8000/static/chat_discussion.html
 - **Features**: 
   - Natural language menu management
   - Drag & drop image upload and analysis
@@ -250,12 +256,28 @@ Access the conversational AI interface:
   - Menu item visualization
   - Sync result tracking
 
+### Menu Management
+- **URL**: http://localhost:8000/menu-management
+- **Features**:
+  - Add, edit, delete menu items
+  - Category management
+  - Price and availability control
+  - Visual menu grid layout
+
+### Audit Records
+- **URL**: http://localhost:8000/audit-page
+- **Features**:
+  - Complete audit trail
+  - Filtering and search
+  - Export to CSV
+  - Performance statistics
+
 ## Monitoring & Health Checks
 
 Access monitoring dashboards:
+- **Main Dashboard**: http://localhost:8000/main
 - **API Documentation**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
-- **Chat Interface**: Open `chat_demo.html` in browser
 - **Prometheus Metrics**: http://localhost:9090
 - **Grafana Dashboard**: http://localhost:3000 (admin/admin)
 - **Database**: PostgreSQL on port 5432
@@ -281,7 +303,10 @@ FoodFlow/
 ├── mcp_server.py      # MCP server for AI integration
 ├── start_mcp.py       # MCP server startup script
 ├── mcp_config.json    # MCP client configuration
-├── chat_demo.html     # Interactive web chat interface
+├── main_ai_foodflow.html  # Main dashboard interface
+├── chat_discussion.html   # Interactive web chat interface
+├── menu_management.html   # Menu management interface
+├── audit_page.html        # Audit records interface
 ├── .env.example       # Environment template
 ├── README_MCP.md      # MCP integration guide
 └── requirements.txt   # Python dependencies

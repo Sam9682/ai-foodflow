@@ -26,9 +26,12 @@
 
 | Service | URL | Description |
 |---------|-----|-------------|
+| Main Dashboard | http://localhost:8000/main | Central hub for all features |
 | API Docs | http://localhost:8000/docs | Interactive API documentation |
 | Health Check | http://localhost:8000/health | Service health status |
-| Chat Interface | `chat_demo.html` | AI chat interface (open in browser) |
+| Chat Interface | http://localhost:8000/static/chat_discussion.html | AI chat interface |
+| Menu Management | http://localhost:8000/menu-management | Visual menu CRUD interface |
+| Audit Records | http://localhost:8000/audit-page | Complete audit trail |
 | Prometheus | http://localhost:9090 | Metrics and monitoring |
 | Grafana | http://localhost:3000 | Dashboard (admin/admin) |
 
@@ -59,6 +62,9 @@ curl -X POST http://localhost:8000/menu-items/ \
 curl -X PUT http://localhost:8000/menu-items/5 \
   -H "Content-Type: application/json" \
   -d '{"price":15.00}'
+
+# Delete item
+curl -X DELETE http://localhost:8000/menu-items/5
 ```
 
 ### Platform Sync
@@ -131,7 +137,10 @@ docker-compose exec app python scripts/init_data.py
 ai-foodflow/
 ├── deploy.sh              # Deployment script
 ├── docker-compose.yml     # Docker services
-├── chat_demo.html         # Web chat interface
+├── main_ai_foodflow.html  # Main dashboard
+├── chat_discussion.html   # Web chat interface
+├── menu_management.html   # Menu management interface
+├── audit_page.html        # Audit records interface
 ├── .env.example          # Environment template
 ├── README.md             # Main documentation
 ├── USER_GUIDE.md         # Usage guide
@@ -183,15 +192,30 @@ curl http://localhost:8000/audit/stats
 ## 🔄 Common Workflows
 
 ### 1. Add New Menu Items
-1. Open `chat_demo.html`
+**Via Dashboard:**
+1. Go to http://localhost:8000/main
+2. Click "Menu Management"
+3. Click "+ Add New Item"
+4. Fill form and save
+
+**Via Chat:**
+1. Open chat interface from dashboard
 2. Upload menu image or type: "Add new pizza for €12.50"
 3. Confirm items
 4. Sync: "Sync to all platforms"
 
 ### 2. Update Prices
+**Via Menu Management:**
+1. Go to menu management page
+2. Click "Edit" on item
+3. Update price and save
+
+**Via Chat:**
 1. Chat: "Update item 5's price to €15.00"
-2. Or API: `curl -X PUT localhost:8000/menu-items/5 -d '{"price":15.00}'`
-3. Sync: "Sync to platforms"
+2. Sync: "Sync to platforms"
+
+**Via API:**
+`curl -X PUT localhost:8000/menu-items/5 -d '{"price":15.00}'`
 
 ### 3. Bulk Menu Upload
 1. Upload high-quality menu image
@@ -201,12 +225,22 @@ curl http://localhost:8000/audit/stats
 5. Sync to platforms
 
 ### 4. Monitor Sync Status
+**Via Dashboard:**
+1. Check status bar on main dashboard
+2. Use "Check Sync Status" quick action
+
+**Via Audit Page:**
+1. Go to audit records page
+2. Filter by "platform_sync" actions
+
+**Via Chat/API:**
 1. Chat: "Check sync status"
-2. Or API: `curl localhost:8000/sync/status/1`
-3. View Grafana dashboard: http://localhost:3000
+2. API: `curl localhost:8000/sync/status/1`
+3. Grafana: http://localhost:3000
 
 ## 📞 Support
 
+- **Main Dashboard**: http://localhost:8000/main
 - **Documentation**: README.md, USER_GUIDE.md, DEPLOYMENT_GUIDE.md
 - **API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
@@ -215,11 +249,13 @@ curl http://localhost:8000/audit/stats
 
 ## 🎯 Pro Tips
 
-1. **Use Docker**: Recommended for production deployment
-2. **High-Quality Images**: Better OCR results with clear menu photos
-3. **Regular Sync**: Keep platforms updated with scheduled sync
-4. **Monitor Health**: Check health endpoint regularly
-5. **Backup Database**: Regular PostgreSQL backups
-6. **Update Credentials**: Rotate API keys periodically
-7. **Use MCP**: Natural language commands via Claude/ChatGPT
-8. **Check Logs**: Use `./deploy.sh logs` for debugging
+1. **Start with Dashboard**: Use main dashboard as your control center
+2. **Use Visual Interfaces**: Menu management and audit pages for easy operations
+3. **High-Quality Images**: Better OCR results with clear menu photos
+4. **Regular Sync**: Keep platforms updated with scheduled sync
+5. **Monitor Health**: Check dashboard status bar regularly
+6. **Backup Database**: Regular PostgreSQL backups
+7. **Update Credentials**: Rotate API keys periodically
+8. **Use MCP**: Natural language commands via Claude/ChatGPT
+9. **Check Logs**: Use `./deploy.sh logs` for debugging
+10. **Export Audits**: Regular CSV exports for record keeping
