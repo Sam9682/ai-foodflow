@@ -38,6 +38,14 @@ Automated synchronization platform for Le Bouzou restaurant across Uber Eats, De
 
 ## Quick Start
 
+### 🚀 One-Command Deployment
+
+```bash
+# Automated deployment script
+./deploy.sh          # Manual deployment
+./deploy.sh docker   # Docker deployment
+```
+
 ### 1. Environment Setup
 
 ```bash
@@ -47,6 +55,7 @@ cp .env.example .env
 # Edit .env with your API credentials (see Platform Integration section for how to obtain)
 # OPENAI_API_KEY=your_openai_api_key
 # DATABASE_URL=postgresql://user:password@localhost:5432/foodflow
+# REDIS_URL=redis://localhost:6379/0
 # UBER_EATS_CLIENT_ID=your_client_id
 # UBER_EATS_CLIENT_SECRET=your_client_secret
 # UBER_EATS_STORE_ID=your_store_id
@@ -54,35 +63,54 @@ cp .env.example .env
 # DELIVEROO_RESTAURANT_ID=your_restaurant_id
 # JUST_EAT_API_KEY=your_api_key
 # JUST_EAT_TENANT_ID=your_tenant_id
+# SECRET_KEY=your_secret_key_here
+# RESTAURANT_NAME=Le Bouzou
+# RESTAURANT_LOCATION=Montpellier/Castelnau-le-Lez
 ```
 
-### 2. Docker Deployment
+### 2. Docker Deployment (Recommended)
 
 ```bash
-# Start all services
-docker-compose up -d
+# Automated Docker deployment
+./deploy.sh docker
 
-# Initialize Le Bouzou data
+# Or manual Docker commands:
+docker-compose up -d
 docker-compose exec app python scripts/init_data.py
 ```
+
+**Docker Services:**
+- **app**: Main FastAPI application
+- **scheduler**: Background sync scheduler
+- **mcp-server**: MCP server for AI integration
+- **db**: PostgreSQL database
+- **redis**: Redis cache
+- **prometheus**: Metrics collection
+- **grafana**: Monitoring dashboard
 
 ### 3. Manual Setup
 
 ```bash
-# Install dependencies
+# Automated manual deployment
+./deploy.sh
+
+# Or manual commands:
 pip install -r requirements.txt
-
-# Start PostgreSQL and Redis
-# Update DATABASE_URL and REDIS_URL in .env
-
-# Initialize database
 python scripts/init_data.py
+uvicorn app.api.main:app --host 0.0.0.0 --port 8000 &
+python -c "from app.services.scheduler import scheduler; scheduler.start()" &
+```
 
-# Start API server
-uvicorn app.api.main:app --reload
+### 4. Stop Services
 
-# Start scheduler (separate terminal)
-python -c "from app.services.scheduler import scheduler; scheduler.start()"
+```bash
+# Docker deployment
+docker-compose down
+
+# Manual deployment
+./deploy.sh stop
+# Or kill processes using saved PIDs
+kill $(cat api.pid scheduler.pid)
 ```
 
 ## API Endpoints
@@ -110,6 +138,7 @@ python -c "from app.services.scheduler import scheduler; scheduler.start()"
 - `POST /chat/message` - Send text message
 - `POST /chat/message-with-image` - Send message with image attachment
 - `POST /chat/add-items` - Add analyzed menu items
+- **Web Interface**: Open `chat_demo.html` in browser for interactive chat
 
 ### Configuration Management
 - `GET /config/credentials` - View API credentials (masked)
@@ -209,20 +238,28 @@ python start_mcp.py
 ## AI Chat Interface
 
 Access the conversational AI interface:
-- **Chat Demo**: Open `chat_demo.html` in your browser
+- **Web Chat Demo**: Open `chat_demo.html` in your browser
 - **WebSocket**: ws://localhost:8000/chat/ws/{restaurant_id}
 - **Features**: 
   - Natural language menu management
-  - Image upload and analysis
+  - Drag & drop image upload and analysis
   - Platform sync commands
   - Real-time responses
+  - Interactive suggestions
+  - Action buttons for quick operations
+  - Menu item visualization
+  - Sync result tracking
 
-## Monitoring
+## Monitoring & Health Checks
 
 Access monitoring dashboards:
-- **API**: http://localhost:8000
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3000 (admin/admin)
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+- **Chat Interface**: Open `chat_demo.html` in browser
+- **Prometheus Metrics**: http://localhost:9090
+- **Grafana Dashboard**: http://localhost:3000 (admin/admin)
+- **Database**: PostgreSQL on port 5432
+- **Redis Cache**: Redis on port 6379
 
 ## Development
 
@@ -230,19 +267,24 @@ Access monitoring dashboards:
 ```
 FoodFlow/
 ├── app/
-│   ├── api/           # FastAPI endpoints (main, chat, config, audit)
+│   ├── api/           # FastAPI endpoints (main, chat, config, audit, bot, websocket)
 │   ├── core/          # Database configuration & initialization
 │   ├── models/        # SQLAlchemy models (restaurant, config, audit)
-│   ├── services/      # Business logic (sync, AI, config, audit)
+│   ├── services/      # Business logic (sync, AI, config, audit, menu_scanner)
 │   └── utils/         # Utilities (image processing)
-├── config/            # Configuration files
-├── scripts/           # Initialization scripts
+├── config/            # Configuration files (prometheus.yml)
+├── scripts/           # Initialization scripts (init_data.py)
+├── deploy.sh          # Automated deployment script
+├── docker-compose.yml # Multi-service Docker configuration
+├── Dockerfile         # Main application container
+├── Dockerfile.mcp     # MCP server container
 ├── mcp_server.py      # MCP server for AI integration
 ├── start_mcp.py       # MCP server startup script
 ├── mcp_config.json    # MCP client configuration
-├── chat_demo.html     # Web chat interface
+├── chat_demo.html     # Interactive web chat interface
+├── .env.example       # Environment template
 ├── README_MCP.md      # MCP integration guide
-└── tests/             # Test files
+└── requirements.txt   # Python dependencies
 ```
 
 ### Adding New Platforms
@@ -297,6 +339,13 @@ GET /audit/stats?days=30
 - ✅ Complete audit trail
 - ✅ Secure credential management
 - ✅ Natural language interface
+- ✅ One-command deployment
+- ✅ Multi-container architecture
+- ✅ Interactive web chat
+- ✅ Image upload & analysis
+- ✅ Health checks & metrics
+- ✅ Redis caching
+- ✅ Background scheduling
 
 ## Support
 
