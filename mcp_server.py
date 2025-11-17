@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import logging
 from typing import Any, Dict, List, Optional
 from mcp.server import Server
 from mcp.types import Tool, TextContent, ImageContent
@@ -11,7 +12,12 @@ from app.core.database import SessionLocal, create_tables
 from app.services.sync_service import SyncService
 from app.services.ai_bot import RestaurantAIBot
 from app.models.restaurant import Restaurant, MenuItem
+from app.core.logging_config import setup_logging
 import base64
+
+# Configure logging with datetime stamps
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # Initialize MCP Server
 server = Server("foodflow")
@@ -137,6 +143,8 @@ async def sync_to_platforms(db: Session, args: Dict[str, Any]) -> List[TextConte
     restaurant_id = args["restaurant_id"]
     platforms = args.get("platforms")
     
+    logger.info(f"Starting platform sync for restaurant {restaurant_id} to platforms: {platforms or 'all'}")
+    
     sync_service = SyncService(db)
     
     if platforms:
@@ -149,6 +157,7 @@ async def sync_to_platforms(db: Session, args: Dict[str, Any]) -> List[TextConte
     success_count = sum(1 for r in results.values() if r.get("success"))
     total_count = len(results)
     
+    logger.info(f"Platform sync completed: {success_count}/{total_count} platforms successful")
     response = f"Sync completed: {success_count}/{total_count} platforms updated successfully.\n\n"
     
     for platform, result in results.items():
@@ -271,12 +280,16 @@ async def get_sync_status(db: Session, args: Dict[str, Any]) -> List[TextContent
 
 async def main():
     """Run MCP server"""
+    logger.info("Starting FoodFlow MCP Server")
+    
     # Initialize database
     create_tables()
+    logger.info("Database tables initialized")
     
     # Start server
     from mcp.server.stdio import stdio_server
     
+    logger.info("MCP Server ready for connections")
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
 

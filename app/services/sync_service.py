@@ -7,7 +7,10 @@ from app.services.audit_service import AuditService
 from datetime import datetime
 import os
 import logging
+from app.core.logging_config import setup_logging
 
+# Ensure logging is configured
+setup_logging()
 logger = logging.getLogger(__name__)
 
 class SyncService:

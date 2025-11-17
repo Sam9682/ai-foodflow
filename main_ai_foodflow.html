@@ -63,6 +63,8 @@
             <div class="action-buttons">
                 <button class="action-btn" onclick="syncAllPlatforms()">🔄 Sync All Platforms</button>
                 <button class="action-btn" onclick="checkSyncStatus()">📊 Check Sync Status</button>
+                <button class="action-btn" onclick="checkSchedulerStatus()">⚠️ Scheduler Status</button>
+                <button class="action-btn" onclick="resetSyncFailures()">🔧 Reset Failures</button>
                 <button class="action-btn" onclick="viewMenu()">📋 View Menu</button>
                 <button class="action-btn" onclick="openChat()">💬 Open AI Chat</button>
             </div>
@@ -205,13 +207,74 @@
                 const data = await response.json();
                 
                 let statusText = 'Sync Status:\\n\\n';
-                Object.entries(data.platforms || {}).forEach(([platform, status]) => {
-                    statusText += `${platform}: ${status.success ? '✅ Success' : '❌ Failed'}\\n`;
+                data.sync_status.forEach(status => {
+                    const icon = status.status === 'success' ? '✅' : '❌';
+                    statusText += `${status.platform}: ${icon} ${status.status}\\n`;
+                    if (status.last_sync) {
+                        statusText += `  Last sync: ${new Date(status.last_sync).toLocaleString()}\\n`;
+                    }
+                    if (status.error_message) {
+                        statusText += `  Error: ${status.error_message}\\n`;
+                    }
+                    statusText += '\\n';
                 });
                 
                 alert(statusText);
             } catch (error) {
                 alert('❌ Error checking sync status: ' + error.message);
+            }
+        }
+
+        async function checkSchedulerStatus() {
+            try {
+                const response = await fetch('/scheduler/status');
+                const data = await response.json();
+                
+                let statusText = 'Scheduler Status:\\n\\n';
+                statusText += `Running: ${data.scheduler_status.is_running ? '✅ Yes' : '❌ No'}\\n`;
+                statusText += `Max Retries: ${data.scheduler_status.max_retries}\\n\\n`;
+                
+                if (data.disabled_syncs.length > 0) {
+                    statusText += 'Disabled Syncs (Manual Intervention Required):\\n';
+                    data.disabled_syncs.forEach(sync => {
+                        statusText += `⚠️ Restaurant ${sync.restaurant_id} - ${sync.platform} (${sync.failure_count} failures)\\n`;
+                    });
+                } else {
+                    statusText += '✅ All syncs are enabled\\n';
+                }
+                
+                if (Object.keys(data.scheduler_status.failure_counts).length > 0) {
+                    statusText += '\\nCurrent Failure Counts:\\n';
+                    Object.entries(data.scheduler_status.failure_counts).forEach(([key, count]) => {
+                        const [restaurantId, platform] = key.split('_', 2);
+                        statusText += `Restaurant ${restaurantId} - ${platform}: ${count} failures\\n`;
+                    });
+                }
+                
+                alert(statusText);
+            } catch (error) {
+                alert('❌ Error checking scheduler status: ' + error.message);
+            }
+        }
+
+        async function resetSyncFailures() {
+            if (!confirm('Reset all sync failure counts and re-enable disabled syncs?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/scheduler/reset-failures', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('❌ Failed to reset sync failures');
+                }
+            } catch (error) {
+                alert('❌ Error resetting sync failures: ' + error.message);
             }
         }
 

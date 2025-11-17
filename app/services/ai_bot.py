@@ -1,15 +1,21 @@
 import openai
 import json
+import logging
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from app.models.restaurant import Restaurant, MenuItem
 from app.services.sync_service import SyncService
 from app.services.config_service import ConfigService
 from app.services.audit_service import AuditService
+from app.core.logging_config import setup_logging
 import os
 import base64
 from PIL import Image
 import io
+
+# Ensure logging is configured
+setup_logging()
+logger = logging.getLogger(__name__)
 
 class RestaurantAIBot:
     def __init__(self, db: Session):
@@ -32,6 +38,8 @@ class RestaurantAIBot:
     def process_message(self, message: str, restaurant_id: int, image_data: Optional[bytes] = None) -> Dict[str, Any]:
         """Process user message with optional image attachment"""
         
+        logger.info(f"Processing message for restaurant {restaurant_id}: {message[:50]}...")
+        
         messages = [{"role": "system", "content": self.system_prompt}]
         
         # Add image if provided
@@ -48,6 +56,7 @@ class RestaurantAIBot:
             messages.append({"role": "user", "content": message})
         
         try:
+            logger.info(f"Sending request to OpenAI API with model: {'gpt-4-vision-preview' if image_data else 'gpt-3.5-turbo'}")
             response = self.openai_client.chat.completions.create(
                 model="gpt-4-vision-preview" if image_data else "gpt-3.5-turbo",
                 messages=messages,
@@ -56,6 +65,7 @@ class RestaurantAIBot:
             )
             
             ai_response = response.choices[0].message.content
+            logger.info("Successfully received response from OpenAI API")
             
             # Determine action based on message content
             if image_data and ("menu" in message.lower() or "scan" in message.lower()):
@@ -76,7 +86,12 @@ class RestaurantAIBot:
                 }
                 
         except Exception as e:
-            return {"type": "error", "message": f"AI processing failed: {str(e)}"}
+            logger.error(f"Error processing message: {str(e)}")
+            return {
+                "type": "error",
+                "response": "Sorry, I encountered an error processing your request. Please try again.",
+                "error": str(e)
+            }
     
     def _handle_menu_analysis(self, ai_response: str, restaurant_id: int, image_data: bytes) -> Dict[str, Any]:
         """Handle menu image analysis"""

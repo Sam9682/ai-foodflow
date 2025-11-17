@@ -12,9 +12,10 @@ from app.api.config import router as config_router
 from app.api.audit import router as audit_router
 from pydantic import BaseModel
 import logging
+from app.core.logging_config import setup_logging
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with datetime stamps
+setup_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="FoodFlow - Restaurant Sync Platform", version="1.0.0")
@@ -186,6 +187,35 @@ async def stop_scheduler():
     """Stop the sync scheduler"""
     scheduler.stop()
     return {"message": "Scheduler stopped"}
+
+@app.get("/scheduler/status")
+async def get_scheduler_status():
+    """Get scheduler status including failure tracking"""
+    status = scheduler.get_sync_status()
+    disabled_syncs = scheduler.get_disabled_syncs()
+    
+    return {
+        "scheduler_status": status,
+        "disabled_syncs": disabled_syncs,
+        "message": f"{len(disabled_syncs)} sync combinations disabled due to repeated failures"
+    }
+
+@app.post("/scheduler/reset-failures")
+async def reset_sync_failures(
+    restaurant_id: Optional[int] = None,
+    platform: Optional[str] = None
+):
+    """Reset sync failure counts and re-enable disabled syncs"""
+    scheduler.reset_sync_failures(restaurant_id, platform)
+    
+    if restaurant_id and platform:
+        message = f"Reset failures for restaurant {restaurant_id} on {platform}"
+    elif restaurant_id:
+        message = f"Reset all failures for restaurant {restaurant_id}"
+    else:
+        message = "Reset all sync failures"
+    
+    return {"message": message}
 
 if __name__ == "__main__":
     import uvicorn
