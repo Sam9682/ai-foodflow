@@ -13,7 +13,7 @@ show_help() {
     echo "  start     Deploy using Docker Compose (recommended)"
     echo "  manual    Deploy manually with local scripts"
     echo "  stop      Stop all running services"
-    echo "  status    Check service status"
+    echo "  ps        Check service status"
     echo "  logs      Show service logs"
     echo "  help      Show this help message"
     echo ""
@@ -21,7 +21,7 @@ show_help() {
     echo "  $0 docker    # Start with Docker"
     echo "  $0 manual    # Start manually"
     echo "  $0 stop      # Stop all services"
-    echo "  $0 status    # Check status"
+    echo "  $0 ps        # Check status"
     echo ""
     echo "Documentation:"
     echo "  README.md           - Main documentation"
@@ -65,7 +65,7 @@ if [ "$1" = "stop" ]; then
     exit 0
 fi
 
-if [ "$1" = "status" ]; then
+if [ "$1" = "ps" ] || [ "$1" = "status" ]; then
     echo "📊 FoodFlow Application Status"
     echo "=============================="
     
@@ -295,7 +295,7 @@ echo "   • DEPLOYMENT_GUIDE.md - Deployment details"
 echo "   • README_MCP.md - AI integration"
 echo ""
 echo "🔧 Management Commands:"
-echo "   • ./deploy.sh status - Check service status"
+echo "   • ./deploy.sh ps - Check service status"
 echo "   • ./deploy.sh logs - View service logs"
 echo "   • ./deploy.sh stop - Stop all services"
 echo "   • ./deploy.sh help - Show help"

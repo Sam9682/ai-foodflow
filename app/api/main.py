@@ -1,6 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.database import get_db, create_tables
@@ -19,6 +21,45 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="FoodFlow - Restaurant Sync Platform", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Custom middleware to handle invalid requests
+@app.middleware("http")
+async def catch_invalid_requests(request: Request, call_next):
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        # Log the error but don't spam logs with common bot requests
+        if "bot" not in request.headers.get("user-agent", "").lower():
+            logger.warning(f"Request error: {str(e)[:100]}")
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Invalid request"}
+        )
+
+# Custom exception handlers
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Invalid request format", "errors": exc.errors()}
+    )
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "Endpoint not found"}
+    )
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="."), name="static")
@@ -174,7 +215,8 @@ async def sync_restaurant_info(sync_request: SyncRequest, db: Session = Depends(
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
+    from datetime import datetime
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"}
 
 @app.post("/scheduler/start")
 async def start_scheduler(background_tasks: BackgroundTasks):
