@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Handle command line arguments
+COMMAND=${1:-help}
+USER_ID=${2:-1}
+USER_NAME=${3:-"admin"}
+USER_EMAIL=${4:-"admin@swautomorph.com"}
+DESCRIPTION=${5:-"Basic Information Display"}
+# Compute var RANGE_START = APPLICATION_IDENTITY_NUMBER * 100 + 6000
+APPLICATION_IDENTITY_NUMBER=1
+RANGE_START=6000
+RANGE_RESERVED=10
+PORT_RANGE_BEGIN=$((APPLICATION_IDENTITY_NUMBER * 100 + RANGE_START))
+
 set -e
 
 # Help function
@@ -45,7 +57,7 @@ if [ "$1" = "stop" ]; then
     echo "🛑 Stopping FoodFlow services..."
     
     if [ -f docker-compose.yml ]; then
-        docker-compose down
+        PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID  down
         echo "✅ Docker services stopped"
     fi
     
@@ -72,7 +84,7 @@ if [ "$1" = "ps" ] || [ "$1" = "status" ]; then
     # Check Docker vs Manual deployment
     if [ -f docker-compose.yml ] && docker-compose ps | grep -q "Up"; then
         echo "🐳 Docker Services:"
-        docker-compose ps
+        PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID docker-compose ps
         echo ""
     else
         echo "🔧 Manual Services:"
@@ -92,31 +104,32 @@ if [ "$1" = "ps" ] || [ "$1" = "status" ]; then
     
     # Test API Health
     echo "🌐 API Health Tests:"
-    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+    HTTPPORT=${HTTPPORT:-8000}
+    if curl -s http://swautomorph.com:$HTTPPORT/health > /dev/null 2>&1; then
         echo "   ✅ Health Endpoint: Responding"
         
         # Test main endpoints
-        if curl -s http://localhost:8000/main > /dev/null 2>&1; then
+        if curl -s http://swautomorph.com:$HTTPPORT/main > /dev/null 2>&1; then
             echo "   ✅ Main Dashboard: Accessible"
         else
             echo "   ❌ Main Dashboard: Not accessible"
         fi
         
-        if curl -s http://localhost:8000/docs > /dev/null 2>&1; then
+        if curl -s http://swautomorph.com:$HTTPPORT/docs > /dev/null 2>&1; then
             echo "   ✅ API Documentation: Accessible"
         else
             echo "   ❌ API Documentation: Not accessible"
         fi
         
         # Test database connection
-        if curl -s http://localhost:8000/config/status > /dev/null 2>&1; then
+        if curl -s http://swautomorph.com:$HTTPPORT/config/status > /dev/null 2>&1; then
             echo "   ✅ Database: Connected"
         else
             echo "   ❌ Database: Connection failed"
         fi
         
         # Test menu API
-        if curl -s http://localhost:8000/menu-items/1 > /dev/null 2>&1; then
+        if curl -s http://swautomorph.com:$HTTPPORT/menu-items/1 > /dev/null 2>&1; then
             echo "   ✅ Menu API: Functional"
         else
             echo "   ❌ Menu API: Not responding"
@@ -129,10 +142,11 @@ if [ "$1" = "ps" ] || [ "$1" = "status" ]; then
     
     echo ""
     echo "🔗 Service Ports:"
-    if netstat -tlnp 2>/dev/null | grep -q ":8000"; then
-        echo "   ✅ Port 8000 (API): In use"
+    HTTPPORT=${HTTPPORT:-8000}
+    if netstat -tlnp 2>/dev/null | grep -q ":$HTTPPORT"; then
+        echo "   ✅ Port $HTTPPORT (API): In use"
     else
-        echo "   ❌ Port 8000 (API): Not listening"
+        echo "   ❌ Port $HTTPPORT (API): Not listening"
     fi
     
     if netstat -tlnp 2>/dev/null | grep -q ":5432"; then
@@ -149,9 +163,10 @@ if [ "$1" = "ps" ] || [ "$1" = "status" ]; then
     
     echo ""
     echo "📋 Overall Status:"
-    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+    HTTPPORT=${HTTPPORT:-8000}
+    if curl -s http://swautomorph.com:$HTTPPORT/health > /dev/null 2>&1; then
         echo "   ✅ FoodFlow: RUNNING"
-        echo "   🌐 Access: http://localhost:8000/main"
+        echo "   🌐 Access: http://swautomorph.com:$HTTPPORT/main"
     else
         echo "   ❌ FoodFlow: NOT RUNNING"
         echo "   🔧 Run: ./deploy.sh to start services"
@@ -166,7 +181,7 @@ if [ "$1" = "logs" ]; then
     
     if [ -f docker-compose.yml ] && docker-compose ps | grep -q "Up"; then
         echo "🐳 Docker Logs (last 50 lines):"
-        docker-compose logs --tail=50 app
+        PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID docker-compose logs --tail=50 app
     else
         echo "🔧 Manual Deployment Logs:"
         if [ -f logs/app.log ]; then
@@ -210,7 +225,7 @@ if [ "$DEPLOY_METHOD" = "start" ]; then
     echo "🐳 Starting Docker deployment..."
     
     # Start services
-    docker-compose up -d
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID docker-compose up -d
     
     # Wait for services to be ready
     echo "⏳ Waiting for services to start..."
@@ -218,19 +233,20 @@ if [ "$DEPLOY_METHOD" = "start" ]; then
     
     # Initialize data
     echo "📊 Initializing Le Bouzou data..."
-    docker-compose exec app python scripts/init_data.py
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID docker-compose exec app python scripts/init_data.py
     
     echo "✅ Docker deployment complete!"
     echo ""
     echo "🌐 Access Points:"
-    echo "   • Main Dashboard: http://localhost:8000/main"
-    echo "   • API Documentation: http://localhost:8000/docs"
-    echo "   • Health Check: http://localhost:8000/health"
-    echo "   • Chat Interface: http://localhost:8000/static/chat_discussion.html"
-    echo "   • Menu Management: http://localhost:8000/menu-management"
-    echo "   • Audit Records: http://localhost:8000/audit-page"
-    echo "   • Prometheus: http://localhost:9090"
-    echo "   • Grafana: http://localhost:3000 (admin/admin)"
+    HTTPPORT=${HTTPPORT:-8000}
+    echo "   • Main Dashboard: http://swautomorph.com:$HTTPPORT/main"
+    echo "   • API Documentation: http://swautomorph.com:$HTTPPORT/docs"
+    echo "   • Health Check: http://swautomorph.com:$HTTPPORT/health"
+    echo "   • Chat Interface: http://swautomorph.com:$HTTPPORT/static/chat_discussion.html"
+    echo "   • Menu Management: http://swautomorph.com:$HTTPPORT/menu-management"
+    echo "   • Audit Records: http://swautomorph.com:$HTTPPORT/audit-page"
+    echo "   • Prometheus: http://swautomorph.com:9090"
+    echo "   • Grafana: http://swautomorph.com:3000 (admin/admin)"
     echo ""
     echo "📖 Next Steps:"
     echo "   • Check USER_GUIDE.md for usage instructions"
@@ -252,7 +268,8 @@ else
     # Start API server in background
     echo "🚀 Starting API server..."
     export PYTHONPATH="$(pwd):$PYTHONPATH"
-    uvicorn app.api.main:app --host 0.0.0.0 --port 8000 &
+    HTTPPORT=${HTTPPORT:-8000}
+    uvicorn app.api.main:app --host 0.0.0.0 --port $HTTPPORT &
     API_PID=$!
     
     # Start scheduler in background
@@ -268,12 +285,13 @@ else
     echo "✅ Manual deployment complete!"
     echo ""
     echo "🌐 Access Points:"
-    echo "   • Main Dashboard: http://localhost:8000/main"
-    echo "   • API Documentation: http://localhost:8000/docs"
-    echo "   • Health Check: http://localhost:8000/health"
-    echo "   • Chat Interface: http://localhost:8000/static/chat_discussion.html"
-    echo "   • Menu Management: http://localhost:8000/menu-management"
-    echo "   • Audit Records: http://localhost:8000/audit-page"
+    HTTPPORT=${HTTPPORT:-8000}
+    echo "   • Main Dashboard: http://swautomorph.com:$HTTPPORT/main"
+    echo "   • API Documentation: http://swautomorph.com:$HTTPPORT/docs"
+    echo "   • Health Check: http://swautomorph.com:$HTTPPORT/health"
+    echo "   • Chat Interface: http://swautomorph.com:$HTTPPORT/static/chat_discussion.html"
+    echo "   • Menu Management: http://swautomorph.com:$HTTPPORT/menu-management"
+    echo "   • Audit Records: http://swautomorph.com:$HTTPPORT/audit-page"
     echo ""
     echo "📖 Next Steps:"
     echo "   • Check USER_GUIDE.md for usage instructions"
