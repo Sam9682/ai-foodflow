@@ -31,5 +31,5 @@ EXPOSE ${HTTPPORT:-6000}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${HTTPPORT:-6000}/health || exit 1
 
-# Default command (FastAPI server)
-CMD uvicorn app.api.main:app --host 0.0.0.0 --port ${HTTPPORT:-6000} --reload
+# Default command (FastAPI server with SSL support)
+CMD uvicorn app.api.main:app --host 0.0.0.0 --port ${HTTPPORT:-6000} --ssl-keyfile=${SSL_KEYFILE:-} --ssl-certfile=${SSL_CERTFILE:-} --reload

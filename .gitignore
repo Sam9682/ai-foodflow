@@ -33,6 +33,7 @@ wheels/
 
 # Virtual environments
 venv/
+.venv/
 env/
 ENV/
 
@@ -50,6 +51,22 @@ logs/
 images/
 tmp/
 temp/
+
+# Process IDs
+*.pid
+api.pid
+scheduler.pid
+
+# Test files
+test_*.py
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.csr
+certs/
+ssl/
 
 # Docker
 .dockerignore

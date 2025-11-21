@@ -105,31 +105,41 @@ if [ "$1" = "ps" ] || [ "$1" = "status" ]; then
     # Test API Health
     echo "🌐 API Health Tests:"
     HTTPPORT=${HTTPPORT:-8000}
-    if curl -s http://swautomorph.com:$HTTPPORT/health > /dev/null 2>&1; then
-        echo "   ✅ Health Endpoint: Responding"
+    
+    # Try HTTPS first, then HTTP
+    if curl -s -k https://swautomorph.com:$HTTPPORT/health > /dev/null 2>&1; then
+        PROTOCOL="https"
+    elif curl -s http://swautomorph.com:$HTTPPORT/health > /dev/null 2>&1; then
+        PROTOCOL="http"
+    else
+        PROTOCOL=""
+    fi
+    
+    if [ -n "$PROTOCOL" ]; then
+        echo "   ✅ Health Endpoint: Responding ($PROTOCOL)"
         
         # Test main endpoints
-        if curl -s http://swautomorph.com:$HTTPPORT/main > /dev/null 2>&1; then
+        if curl -s -k $PROTOCOL://swautomorph.com:$HTTPPORT/main > /dev/null 2>&1; then
             echo "   ✅ Main Dashboard: Accessible"
         else
             echo "   ❌ Main Dashboard: Not accessible"
         fi
         
-        if curl -s http://swautomorph.com:$HTTPPORT/docs > /dev/null 2>&1; then
+        if curl -s -k $PROTOCOL://swautomorph.com:$HTTPPORT/docs > /dev/null 2>&1; then
             echo "   ✅ API Documentation: Accessible"
         else
             echo "   ❌ API Documentation: Not accessible"
         fi
         
         # Test database connection
-        if curl -s http://swautomorph.com:$HTTPPORT/config/status > /dev/null 2>&1; then
+        if curl -s -k $PROTOCOL://swautomorph.com:$HTTPPORT/config/status > /dev/null 2>&1; then
             echo "   ✅ Database: Connected"
         else
             echo "   ❌ Database: Connection failed"
         fi
         
         # Test menu API
-        if curl -s http://swautomorph.com:$HTTPPORT/menu-items/1 > /dev/null 2>&1; then
+        if curl -s -k $PROTOCOL://swautomorph.com:$HTTPPORT/menu-items/1 > /dev/null 2>&1; then
             echo "   ✅ Menu API: Functional"
         else
             echo "   ❌ Menu API: Not responding"
@@ -164,9 +174,11 @@ if [ "$1" = "ps" ] || [ "$1" = "status" ]; then
     echo ""
     echo "📋 Overall Status:"
     HTTPPORT=${HTTPPORT:-8000}
-    if curl -s http://swautomorph.com:$HTTPPORT/health > /dev/null 2>&1; then
+    
+    # Determine protocol from previous check
+    if [ -n "$PROTOCOL" ]; then
         echo "   ✅ FoodFlow: RUNNING"
-        echo "   🌐 Access: http://swautomorph.com:$HTTPPORT/main"
+        echo "   🌐 Access: $PROTOCOL://swautomorph.com:$HTTPPORT/main"
     else
         echo "   ❌ FoodFlow: NOT RUNNING"
         echo "   🔧 Run: ./deploy.sh to start services"
@@ -239,14 +251,15 @@ if [ "$DEPLOY_METHOD" = "start" ]; then
     echo ""
     echo "🌐 Access Points:"
     HTTPPORT=${HTTPPORT:-8000}
-    echo "   • Main Dashboard: http://swautomorph.com:$HTTPPORT/main"
-    echo "   • API Documentation: http://swautomorph.com:$HTTPPORT/docs"
-    echo "   • Health Check: http://swautomorph.com:$HTTPPORT/health"
-    echo "   • Chat Interface: http://swautomorph.com:$HTTPPORT/static/chat_discussion.html"
-    echo "   • Menu Management: http://swautomorph.com:$HTTPPORT/menu-management"
-    echo "   • Audit Records: http://swautomorph.com:$HTTPPORT/audit-page"
-    echo "   • Prometheus: http://swautomorph.com:9090"
-    echo "   • Grafana: http://swautomorph.com:3000 (admin/admin)"
+    PROTOCOL="https"
+    echo "   • Main Dashboard: $PROTOCOL://swautomorph.com:$HTTPPORT/main"
+    echo "   • API Documentation: $PROTOCOL://swautomorph.com:$HTTPPORT/docs"
+    echo "   • Health Check: $PROTOCOL://swautomorph.com:$HTTPPORT/health"
+    echo "   • Chat Interface: $PROTOCOL://swautomorph.com:$HTTPPORT/static/chat_discussion.html"
+    echo "   • Menu Management: $PROTOCOL://swautomorph.com:$HTTPPORT/menu-management"
+    echo "   • Audit Records: $PROTOCOL://swautomorph.com:$HTTPPORT/audit-page"
+    echo "   • Prometheus: https://swautomorph.com:9090"
+    echo "   • Grafana: https://swautomorph.com:3000 (admin/admin)"
     echo ""
     echo "📖 Next Steps:"
     echo "   • Check USER_GUIDE.md for usage instructions"
@@ -269,7 +282,15 @@ else
     echo "🚀 Starting API server..."
     export PYTHONPATH="$(pwd):$PYTHONPATH"
     HTTPPORT=${HTTPPORT:-8000}
-    uvicorn app.api.main:app --host 0.0.0.0 --port $HTTPPORT &
+    
+    # Check for SSL certificates
+    if [ -f "certs/server.key" ] && [ -f "certs/server.crt" ]; then
+        echo "🔒 Starting with SSL/HTTPS support"
+        uvicorn app.api.main:app --host 0.0.0.0 --port $HTTPPORT --ssl-keyfile=certs/server.key --ssl-certfile=certs/server.crt &
+    else
+        echo "⚠️ Starting without SSL (HTTP only)"
+        uvicorn app.api.main:app --host 0.0.0.0 --port $HTTPPORT &
+    fi
     API_PID=$!
     
     # Start scheduler in background
@@ -286,12 +307,22 @@ else
     echo ""
     echo "🌐 Access Points:"
     HTTPPORT=${HTTPPORT:-8000}
-    echo "   • Main Dashboard: http://swautomorph.com:$HTTPPORT/main"
-    echo "   • API Documentation: http://swautomorph.com:$HTTPPORT/docs"
-    echo "   • Health Check: http://swautomorph.com:$HTTPPORT/health"
-    echo "   • Chat Interface: http://swautomorph.com:$HTTPPORT/static/chat_discussion.html"
-    echo "   • Menu Management: http://swautomorph.com:$HTTPPORT/menu-management"
-    echo "   • Audit Records: http://swautomorph.com:$HTTPPORT/audit-page"
+    
+    # Determine protocol based on SSL certificates
+    if [ -f "certs/server.key" ] && [ -f "certs/server.crt" ]; then
+        PROTOCOL="https"
+        echo "   🔒 SSL/HTTPS enabled"
+    else
+        PROTOCOL="http"
+        echo "   ⚠️ HTTP only (run ./generate_ssl.sh for HTTPS)"
+    fi
+    
+    echo "   • Main Dashboard: $PROTOCOL://swautomorph.com:$HTTPPORT/main"
+    echo "   • API Documentation: $PROTOCOL://swautomorph.com:$HTTPPORT/docs"
+    echo "   • Health Check: $PROTOCOL://swautomorph.com:$HTTPPORT/health"
+    echo "   • Chat Interface: $PROTOCOL://swautomorph.com:$HTTPPORT/static/chat_discussion.html"
+    echo "   • Menu Management: $PROTOCOL://swautomorph.com:$HTTPPORT/menu-management"
+    echo "   • Audit Records: $PROTOCOL://swautomorph.com:$HTTPPORT/audit-page"
     echo ""
     echo "📖 Next Steps:"
     echo "   • Check USER_GUIDE.md for usage instructions"
