@@ -1,350 +1,367 @@
 #!/bin/bash
-
-# Handle command line arguments
-COMMAND=${1:-help}
-USER_ID=${2:-1}
-USER_NAME=${3:-"admin"}
-USER_EMAIL=${4:-"admin@swautomorph.com"}
-DESCRIPTION=${5:-"Basic Information Display"}
-# Compute var RANGE_START = APPLICATION_IDENTITY_NUMBER * 100 + 6000
-APPLICATION_IDENTITY_NUMBER=1
-RANGE_START=6000
-RANGE_RESERVED=10
-PORT_RANGE_BEGIN=$((APPLICATION_IDENTITY_NUMBER * 100 + RANGE_START))
+# ${NAME_OF_APPLICATION} Production Deployment Script
 
 set -e
 
-# Help function
-show_help() {
-    echo "🚀 FoodFlow Platform Deployment Script"
-    echo "======================================"
-    echo ""
-    echo "Usage: $0 [OPTION]"
-    echo ""
-    echo "Options:"
-    echo "  start     Deploy using Docker Compose (recommended)"
-    echo "  manual    Deploy manually with local scripts"
-    echo "  stop      Stop all running services"
-    echo "  ps        Check service status"
-    echo "  logs      Show service logs"
-    echo "  help      Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  $0 docker    # Start with Docker"
-    echo "  $0 manual    # Start manually"
-    echo "  $0 stop      # Stop all services"
-    echo "  $0 ps        # Check status"
-    echo ""
-    echo "Documentation:"
-    echo "  README.md           - Main documentation"
-    echo "  DEPLOYMENT_GUIDE.md - Detailed deployment guide"
-    echo "  USER_GUIDE.md       - User interface guide"
-    echo "  README_MCP.md       - AI integration guide"
-    echo ""
-    exit 0
+# Global Variables
+NAME_OF_APPLICATION="AI-FOODFLOW"
+APPLICATION_IDENTITY_NUMBER=1
+RANGE_START=6000
+RANGE_RESERVED=10
+
+# Global Parameters
+COMMAND=${1:-help}
+USER_ID=${2:-0}
+USER_NAME=${3:-"user"}
+USER_EMAIL=${4:-"user@swautomorph.com"}
+DESCRIPTION=${5:-"Basic Information Display"}
+
+# Configuration
+DOMAIN=${DOMAIN:-"www.swautomorph.com"}
+EMAIL=${EMAIL:-"user@swautomorph.com"}
+ENV_FILE=".env.prod"
+
+# Calculate ports (convert alphanumeric USER_ID to numeric for port calculation)
+calculate_ports() {
+    PORT_RANGE_BEGIN=$((APPLICATION_IDENTITY_NUMBER * 100 + RANGE_START))
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED))
+    HTTPS_PORT=$((PORT + 1))
 }
 
-# Check for help flag
-if [ "$1" = "help" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-    show_help
-fi
-
-echo "🚀 FoodFlow Platform Deployment Script"
-echo "======================================"
-
-# Handle special commands first
-if [ "$1" = "stop" ]; then
-    echo "🛑 Stopping FoodFlow services..."
-    
-    if [ -f docker-compose.yml ]; then
-        PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID  down
-        echo "✅ Docker services stopped"
-    fi
-    
-    if [ -f api.pid ]; then
-        kill $(cat api.pid) 2>/dev/null || true
-        rm -f api.pid
-        echo "✅ API server stopped"
-    fi
-    
-    if [ -f scheduler.pid ]; then
-        kill $(cat scheduler.pid) 2>/dev/null || true
-        rm -f scheduler.pid
-        echo "✅ Scheduler stopped"
-    fi
-    
-    echo "🎉 All services stopped"
-    exit 0
-fi
-
-if [ "$1" = "ps" ] || [ "$1" = "status" ]; then
-    echo "📊 FoodFlow Application Status"
-    echo "=============================="
-    
-    # Check Docker vs Manual deployment
-    if [ -f docker-compose.yml ] && docker-compose ps | grep -q "Up"; then
-        echo "🐳 Docker Services:"
-        PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID docker-compose ps
-        echo ""
-    else
-        echo "🔧 Manual Services:"
-        if [ -f api.pid ] && kill -0 $(cat api.pid) 2>/dev/null; then
-            echo "   ✅ API Server: Running (PID: $(cat api.pid))"
-        else
-            echo "   ❌ API Server: Not running"
-        fi
-        
-        if [ -f scheduler.pid ] && kill -0 $(cat scheduler.pid) 2>/dev/null; then
-            echo "   ✅ Scheduler: Running (PID: $(cat scheduler.pid))"
-        else
-            echo "   ❌ Scheduler: Not running"
-        fi
-        echo ""
-    fi
-    
-    # Test API Health
-    echo "🌐 API Health Tests:"
-    HTTPPORT=${HTTPPORT:-8000}
-    
-    # Try HTTPS first, then HTTP
-    if curl -s -k https://swautomorph.com:$HTTPPORT/health > /dev/null 2>&1; then
-        PROTOCOL="https"
-    elif curl -s http://swautomorph.com:$HTTPPORT/health > /dev/null 2>&1; then
-        PROTOCOL="http"
-    else
-        PROTOCOL=""
-    fi
-    
-    if [ -n "$PROTOCOL" ]; then
-        echo "   ✅ Health Endpoint: Responding ($PROTOCOL)"
-        
-        # Test main endpoints
-        if curl -s -k $PROTOCOL://swautomorph.com:$HTTPPORT/main > /dev/null 2>&1; then
-            echo "   ✅ Main Dashboard: Accessible"
-        else
-            echo "   ❌ Main Dashboard: Not accessible"
-        fi
-        
-        if curl -s -k $PROTOCOL://swautomorph.com:$HTTPPORT/docs > /dev/null 2>&1; then
-            echo "   ✅ API Documentation: Accessible"
-        else
-            echo "   ❌ API Documentation: Not accessible"
-        fi
-        
-        # Test database connection
-        if curl -s -k $PROTOCOL://swautomorph.com:$HTTPPORT/config/status > /dev/null 2>&1; then
-            echo "   ✅ Database: Connected"
-        else
-            echo "   ❌ Database: Connection failed"
-        fi
-        
-        # Test menu API
-        if curl -s -k $PROTOCOL://swautomorph.com:$HTTPPORT/menu-items/1 > /dev/null 2>&1; then
-            echo "   ✅ Menu API: Functional"
-        else
-            echo "   ❌ Menu API: Not responding"
-        fi
-        
-    else
-        echo "   ❌ API Server: Not responding"
-        echo "   ❌ All dependent services: Unavailable"
-    fi
-    
+# Display environment variables for operations
+show_environment() {
+    local operation=$1
+    echo "🔍 Starting $operation operation..."
+    echo "Environment Variables:"
+    echo "  USER_ID=${USER_ID}"
+    echo "  USER_NAME=${USER_NAME}"
+    echo "  USER_EMAIL=${USER_EMAIL}"
+    echo "  PORT=${PORT}"
+    echo "  HTTPS_PORT=${HTTPS_PORT}"
     echo ""
-    echo "🔗 Service Ports:"
-    HTTPPORT=${HTTPPORT:-8000}
-    if netstat -tlnp 2>/dev/null | grep -q ":$HTTPPORT"; then
-        echo "   ✅ Port $HTTPPORT (API): In use"
-    else
-        echo "   ❌ Port $HTTPPORT (API): Not listening"
-    fi
-    
-    if netstat -tlnp 2>/dev/null | grep -q ":5432"; then
-        echo "   ✅ Port 5432 (PostgreSQL): In use"
-    else
-        echo "   ❌ Port 5432 (PostgreSQL): Not listening"
-    fi
-    
-    if netstat -tlnp 2>/dev/null | grep -q ":6379"; then
-        echo "   ✅ Port 6379 (Redis): In use"
-    else
-        echo "   ❌ Port 6379 (Redis): Not listening"
-    fi
-    
-    echo ""
-    echo "📋 Overall Status:"
-    HTTPPORT=${HTTPPORT:-8000}
-    
-    # Determine protocol from previous check
-    if [ -n "$PROTOCOL" ]; then
-        echo "   ✅ FoodFlow: RUNNING"
-        echo "   🌐 Access: $PROTOCOL://swautomorph.com:$HTTPPORT/main"
-    else
-        echo "   ❌ FoodFlow: NOT RUNNING"
-        echo "   🔧 Run: ./deploy.sh to start services"
-    fi
-    
-    exit 0
+}
+
+echo "🚀 ${NAME_OF_APPLICATION} Production Deployment"
+echo "=================================="
+
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Helper functions
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if running as root
+if [[ $EUID -eq 0 ]]; then
+   log_error "This script should not be run as root"
+   exit 1
 fi
 
-if [ "$1" = "logs" ]; then
-    echo "📋 FoodFlow Service Logs"
-    echo "======================="
+# Check prerequisites
+check_prerequisites() {
+    log_info "Checking prerequisites..."
     
-    if [ -f docker-compose.yml ] && docker-compose ps | grep -q "Up"; then
-        echo "🐳 Docker Logs (last 50 lines):"
-        PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID docker-compose logs --tail=50 app
-    else
-        echo "🔧 Manual Deployment Logs:"
-        if [ -f logs/app.log ]; then
-            echo "📄 API Server Logs (last 20 lines):"
-            tail -20 logs/app.log
-        else
-            echo "   ❌ No log files found"
-        fi
-    fi
-    
-    exit 0
-fi
-
-# Check if .env exists for deployment commands
-if [ ! -f .env ]; then
-    echo "📋 Setting up environment..."
-    if [ -f .env.example ]; then
-        cp .env.example .env
-        echo "✅ Created .env from template"
-        echo ""
-        echo "⚠️  IMPORTANT: Please edit .env with your API credentials:"
-        echo "   • OPENAI_API_KEY - Required for AI features"
-        echo "   • Platform API credentials (Uber Eats, Deliveroo, Just Eat)"
-        echo "   • Database and Redis URLs (if using manual deployment)"
-        echo ""
-        echo "📖 See DEPLOYMENT_GUIDE.md for credential setup instructions"
-        echo "🔧 Run './deploy.sh help' for more options"
-        exit 1
-    else
-        echo "❌ No .env.example found. Please create .env manually"
-        echo "📖 Check DEPLOYMENT_GUIDE.md for environment setup"
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker is not installed. Please install Docker first."
         exit 1
     fi
-fi
+    
+    if ! command -v docker-compose &> /dev/null; then
+        log_error "Docker Compose is not installed. Please install Docker Compose first."
+        exit 1
+    fi
+    
+    log_info "Prerequisites check passed ✅"
+}
 
-# Set default deployment method to manual if no parameter provided
-DEPLOY_METHOD="${1:-manual}"
+# Generate secure passwords
+generate_secrets() {
+    log_info "Generating secure secrets..."
+    
+    if [[ ! -f "$ENV_FILE" ]]; then
+        log_info "Creating production environment file..."
+        
+        # Generate secure passwords
+        DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+        JWT_SECRET=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+        
+        cat > "$ENV_FILE" << EOF
+# Database Configuration (SQLite)
+DATABASE_URL=sqlite:///./data/ai_haccp.db
 
-# Check deployment method
-if [ "$DEPLOY_METHOD" = "start" ]; then
-    echo "🐳 Starting Docker deployment..."
+# Security
+JWT_SECRET=$JWT_SECRET
+
+# Domain Configuration
+DOMAIN=$DOMAIN
+API_URL=https://$DOMAIN
+SSL_EMAIL=$EMAIL
+
+# Frontend
+REACT_APP_API_URL=https://$DOMAIN
+EOF
+        
+        chmod 600 "$ENV_FILE"
+        log_info "Environment file created with secure passwords ✅"
+    else
+        log_warn "Environment file already exists, skipping generation"
+    fi
+}
+
+# Setup SSL certificates
+setup_ssl() {
+    log_info "Setting up SSL certificates..."
+    
+    if [[ ! -d "ssl" ]]; then
+        mkdir -p ssl
+        
+        # Check if certbot is installed
+        if command -v certbot &> /dev/null; then
+            log_info "Obtaining SSL certificate for $DOMAIN..."
+            
+            # Stop nginx if running
+            sudo systemctl stop nginx 2>/dev/null || true
+            
+            # Get certificate
+            sudo certbot certonly --standalone \
+                -d "$DOMAIN" \
+                --email "$EMAIL" \
+                --agree-tos \
+                --non-interactive \
+                --quiet
+            
+            # Copy certificates
+            sudo cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ssl/
+            sudo cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" ssl/
+            sudo chown -R $USER:$USER ssl/
+            
+            log_info "SSL certificates obtained ✅"
+        else
+            log_warn "Certbot not found. Creating self-signed certificates for testing..."
+            
+            # Create self-signed certificate for testing
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout ssl/privkey.pem \
+                -out ssl/fullchain.pem \
+                -subj "/C=US/ST=State/L=City/O=Organization/CN=$DOMAIN"
+            
+            log_warn "Self-signed certificate created. Replace with real certificate for production!"
+        fi
+    else
+        log_info "SSL directory already exists, skipping certificate generation"
+    fi
+}
+
+# Build and deploy
+deploy_services() {
+    log_info "Building and deploying services..."
+
+    # Stop existing services
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED + 1)) USER_ID=$USER_ID docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
+    
+    # Build images
+    log_info "Building Docker images..."
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED + 1)) USER_ID=$USER_ID docker-compose -f docker-compose.prod.yml build --no-cache --build-arg PIP_UPGRADE=1
     
     # Start services
-    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID docker-compose up -d
+    log_info "Starting production services..."
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED + 1)) USER_ID=$USER_ID docker-compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d
     
     # Wait for services to be ready
-    echo "⏳ Waiting for services to start..."
+    log_info "Waiting for services to start..."
+    sleep 30
+    
+    # Check service health
+    if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+        log_info "Services deployed successfully ✅"
+    else
+        log_error "Some services failed to start"
+        docker-compose -f docker-compose.prod.yml logs
+        exit 1
+    fi
+}
+
+# Verify deployment
+verify_deployment() {
+    log_info "Verifying deployment..."
+    
+    # Check if services are running
+    if ! docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+        log_error "Services are not running properly"
+        return 1
+    fi
+    
+    # Test API health endpoint
     sleep 10
+    if curl -f -s "http://www.swautomorph.com:${PORT}/health" > /dev/null; then
+        log_info "API health check passed ✅"
+    else
+        log_warn "API health check failed, but services are running"
+    fi
     
-    # Initialize data
-    echo "📊 Initializing Le Bouzou data..."
-    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) USER_ID=$USER_ID docker-compose exec app python scripts/init_data.py
+    log_info "Deployment verification completed"
+}
+
+# Setup firewall
+setup_firewall() {
+    log_info "Configuring firewall..."
     
-    echo "✅ Docker deployment complete!"
-    echo ""
-    echo "🌐 Access Points:"
-    HTTPPORT=${HTTPPORT:-8000}
-    PROTOCOL="https"
-    echo "   • Main Dashboard: $PROTOCOL://swautomorph.com:$HTTPPORT/main"
-    echo "   • API Documentation: $PROTOCOL://swautomorph.com:$HTTPPORT/docs"
-    echo "   • Health Check: $PROTOCOL://swautomorph.com:$HTTPPORT/health"
-    echo "   • Chat Interface: $PROTOCOL://swautomorph.com:$HTTPPORT/static/chat_discussion.html"
-    echo "   • Menu Management: $PROTOCOL://swautomorph.com:$HTTPPORT/menu-management"
-    echo "   • Audit Records: $PROTOCOL://swautomorph.com:$HTTPPORT/audit-page"
-    echo "   • Prometheus: https://swautomorph.com:9090"
-    echo "   • Grafana: https://swautomorph.com:3000 (admin/admin)"
-    echo ""
-    echo "📖 Next Steps:"
-    echo "   • Check USER_GUIDE.md for usage instructions"
-    echo "   • Configure platform API credentials in .env"
-    echo "   • Test chat interface with menu images"
+    if command -v ufw &> /dev/null; then
+        # Configure UFW if available
+        sudo ufw --force reset
+        sudo ufw default deny incoming
+        sudo ufw default allow outgoing
+        sudo ufw allow ssh
+        sudo ufw allow ${PORT}/tcp
+        sudo ufw allow ${HTTPS_PORT}/tcp
+        sudo ufw --force enable
+        
+        log_info "Firewall configured ✅"
+    else
+        log_warn "UFW not found, skipping firewall configuration"
+    fi
+}
+
+# Create backup script
+create_backup_script() {
+    log_info "Creating backup script..."
     
+    cat > backup.sh << 'EOF'
+#!/bin/bash
+# ${NAME_OF_APPLICATION} Backup Script
+
+BACKUP_DIR="backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/ai_haccp_backup_$DATE"
+
+mkdir -p "$BACKUP_DIR"
+
+echo "Creating backup: $BACKUP_FILE"
+PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED + 1)) USER_ID=$USER_ID docker-compose -f docker-compose.prod.yml exec -T api cp /app/data/ai_haccp.db /tmp/backup.db
+docker cp $(docker-compose -f docker-compose.prod.yml ps -q api):/tmp/backup.db "$BACKUP_FILE.db"
+
+if [[ $? -eq 0 ]]; then
+    echo "Backup created successfully: $BACKUP_FILE"
+    
+    # Keep only last 7 backups
+    ls -t "$BACKUP_DIR"/ai_haccp_backup_*.db | tail -n +8 | xargs -r rm
+    echo "Old backups cleaned up"
 else
-    echo "🔧 Starting manual deployment..."
-    
-    # Install dependencies
-    echo "📦 Installing dependencies..."
-    pip install -r requirements.txt
-    
-    # Initialize database
-    echo "🗄️ Initializing database..."
-    export PYTHONPATH="$(pwd):$PYTHONPATH"
-    python scripts/init_data.py
-    
-    # Start API server in background
-    echo "🚀 Starting API server..."
-    export PYTHONPATH="$(pwd):$PYTHONPATH"
-    HTTPPORT=${HTTPPORT:-8000}
-    
-    # Check for SSL certificates
-    if [ -f "certs/server.key" ] && [ -f "certs/server.crt" ]; then
-        echo "🔒 Starting with SSL/HTTPS support"
-        uvicorn app.api.main:app --host 0.0.0.0 --port $HTTPPORT --ssl-keyfile=certs/server.key --ssl-certfile=certs/server.crt &
-    else
-        echo "⚠️ Starting without SSL (HTTP only)"
-        uvicorn app.api.main:app --host 0.0.0.0 --port $HTTPPORT &
-    fi
-    API_PID=$!
-    
-    # Start scheduler in background
-    echo "⏰ Starting scheduler..."
-    export PYTHONPATH="$(pwd):$PYTHONPATH"
-    python -c "from app.services.scheduler import scheduler; scheduler.start()" &
-    SCHEDULER_PID=$!
-    
-    # Save PIDs for cleanup
-    echo $API_PID > api.pid
-    echo $SCHEDULER_PID > scheduler.pid
-    
-    echo "✅ Manual deployment complete!"
-    echo ""
-    echo "🌐 Access Points:"
-    HTTPPORT=${HTTPPORT:-8000}
-    
-    # Determine protocol based on SSL certificates
-    if [ -f "certs/server.key" ] && [ -f "certs/server.crt" ]; then
-        PROTOCOL="https"
-        echo "   🔒 SSL/HTTPS enabled"
-    else
-        PROTOCOL="http"
-        echo "   ⚠️ HTTP only (run ./generate_ssl.sh for HTTPS)"
-    fi
-    
-    echo "   • Main Dashboard: $PROTOCOL://swautomorph.com:$HTTPPORT/main"
-    echo "   • API Documentation: $PROTOCOL://swautomorph.com:$HTTPPORT/docs"
-    echo "   • Health Check: $PROTOCOL://swautomorph.com:$HTTPPORT/health"
-    echo "   • Chat Interface: $PROTOCOL://swautomorph.com:$HTTPPORT/static/chat_discussion.html"
-    echo "   • Menu Management: $PROTOCOL://swautomorph.com:$HTTPPORT/menu-management"
-    echo "   • Audit Records: $PROTOCOL://swautomorph.com:$HTTPPORT/audit-page"
-    echo ""
-    echo "📖 Next Steps:"
-    echo "   • Check USER_GUIDE.md for usage instructions"
-    echo "   • Configure platform API credentials in .env"
-    echo "   • Test chat interface with menu images"
-    echo ""
-    echo "🛑 To stop: ./deploy.sh stop"
+    echo "Backup failed!"
+    exit 1
 fi
+EOF
+    
+    chmod +x backup.sh
+    log_info "Backup script created ✅"
+}
 
+# Main deployment process
+start() {
+    log_info "Starting ${NAME_OF_APPLICATION} production deployment..."
+    
+    check_prerequisites
+    generate_secrets
+    setup_ssl
+    deploy_services
+    verify_deployment
+    setup_firewall
+    create_backup_script
+    
+    echo ""
+    echo "🎉 Deployment completed successfully!"
+    echo "=================================="
+    echo "🌐 Web Interface: https://$DOMAIN"
+    echo "📚 API Documentation: https://$DOMAIN/docs"
+    echo "🔑 Demo Login: admin@ai-automorph.com / password"
+    echo ""
+    echo "📋 Next Steps:"
+    echo "1. Test the application at https://$DOMAIN"
+    echo "2. Change default demo password"
+    echo "3. Configure DNS to point to this server"
+    echo "4. Set up automated backups: ./backup.sh"
+    echo "5. Monitor logs: docker-compose -f docker-compose.prod.yml logs -f"
+    echo ""
+    echo "🔧 Management Commands:"
+    echo "- View logs: make logs"
+    echo "- Backup database: ./backup.sh"
+    echo "- Stop services: make stop"
+    echo "- Update application: git pull && make prod"
+}
 
+# Stop services
+stop_services() {
+    log_info "Stopping ${NAME_OF_APPLICATION} services..."
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED + 1)) USER_ID=$USER_ID docker-compose -f docker-compose.prod.yml down
+    log_info "Services stopped successfully ✅"
+}
 
-echo ""
-echo "🎉 FoodFlow is now running!"
-echo ""
-echo "📚 Documentation:"
-echo "   • README.md - Main documentation"
-echo "   • USER_GUIDE.md - Usage instructions"
-echo "   • DEPLOYMENT_GUIDE.md - Deployment details"
-echo "   • README_MCP.md - AI integration"
-echo ""
-echo "🔧 Management Commands:"
-echo "   • ./deploy.sh ps - Check service status"
-echo "   • ./deploy.sh logs - View service logs"
-echo "   • ./deploy.sh stop - Stop all services"
-echo "   • ./deploy.sh help - Show help"
+# Restart services
+restart_services() {
+    log_info "Restarting ${NAME_OF_APPLICATION} services..."
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED + 1)) USER_ID=$USER_ID docker-compose -f docker-compose.prod.yml restart
+    log_info "Services restarted successfully ✅"
+}
+
+# Check service status
+check_status() {
+    log_info "Checking ${NAME_OF_APPLICATION} service status..."
+    echo ""
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED + 1)) USER_ID=$USER_ID docker-compose -f docker-compose.prod.yml ps
+    echo ""
+    
+    if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+        log_info "${NAME_OF_APPLICATION} is running ✅"
+    else
+        log_warn "${NAME_OF_APPLICATION} is not running ⚠️"
+    fi
+}
+
+# Main function - orchestrates the deployment process
+main() {
+    calculate_ports
+    show_environment "${NAME_OF_APPLICATION}"
+
+    case $COMMAND in
+        "ps")
+            check_status
+            exit 0
+            ;;
+        "stop")
+            stop_services
+            exit 0
+            ;;
+        "logs")
+            show_logs
+            exit 0
+            ;;
+        "restart")
+            restart_services
+            exit 0
+            ;;
+        "start")
+            start
+            exit 0
+            ;;
+        *)
+            show_usage
+            exit 1
+            ;;
+    esac
+}
+
+# Execute main function
+main "$@"
