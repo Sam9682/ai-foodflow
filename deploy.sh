@@ -38,10 +38,6 @@ show_environment() {
     echo ""
 }
 
-echo "🚀 ${NAME_OF_APPLICATION} Production Deployment"
-echo "=================================="
-
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -371,6 +367,9 @@ main() {
             exit 0
             ;;
         "start")
+            echo "🚀 ${NAME_OF_APPLICATION} Production Deployment"
+            echo "=================================="
+
             start
             exit 0
             ;;
