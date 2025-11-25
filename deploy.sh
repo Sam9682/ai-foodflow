@@ -309,6 +309,12 @@ restart_services() {
     log_info "Services restarted successfully ✅"
 }
 
+# Show logs
+show_logs() {
+    log_info "Showing ${NAME_OF_APPLICATION} service logs..."
+    PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED)) HTTPS_PORT=$((PORT_RANGE_BEGIN + USER_ID * RANGE_RESERVED + 1)) USER_ID=$USER_ID docker-compose -f docker-compose.prod.yml logs -f
+}
+
 # Check service status
 check_status() {
     # Get parameters
