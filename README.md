@@ -1,380 +1,131 @@
-# FoodFlow - Multi-Platform Restaurant Sync System
+# FoodFlow - AI-Powered Restaurant Menu Sync
 
-Automated synchronization platform for Le Bouzou restaurant across Uber Eats, Deliveroo, and Just Eat.
+## Objective
 
-## Features
+FoodFlow automates restaurant menu synchronization across multiple delivery platforms (Uber Eats, Deliveroo, Just Eat) using AI-powered natural language processing. It provides:
 
-- **MCP Integration**: Model Context Protocol support for AI systems (Claude, ChatGPT)
-- **AI Chat Interface**: Conversational AI assistant for menu management
-- **Menu Image Analysis**: Upload menu images for automatic item extraction
-- **Centralized Menu Management**: Single source of truth for menu items, prices, and availability
-- **Multi-Platform Sync**: Automated synchronization to Uber Eats, Deliveroo, and Just Eat
-- **Scheduled Updates**: Daily, weekly, and hourly sync schedules
-- **Real-time Monitoring**: Sync status tracking and error handling
-- **Configuration Management**: Database-backed credential storage with environment fallback
-- **Audit System**: Complete action history and performance tracking
-- **REST API**: Complete API for restaurant and menu management
+- **AI Menu Management**: Natural language commands for menu operations
+- **Image Analysis**: Automatic menu extraction from uploaded images
+- **Multi-Platform Sync**: Automated synchronization to delivery platforms
+- **MCP Integration**: Model Context Protocol for AI agent interaction
 
-## Architecture
+## Installation & Configuration
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   MCP Server    │    │   FastAPI App    │    │  Platform APIs  │
-│                 │    │                  │    │                 │
-│ • AI Tools      │◄──►│ • REST Endpoints │◄──►│ • Uber Eats     │
-│ • Natural Lang  │    │ • Chat Interface │    │ • Deliveroo     │
-│ • Claude/GPT    │    │ • Sync Service   │    │ • Just Eat      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   PostgreSQL    │    │   Config & Audit │    │   Redis Cache   │
-│                 │    │                  │    │                 │
-│ • Restaurants   │    │ • API Credentials│    │ • Sync Queue    │
-│ • Menu Items    │    │ • Action History │    │ • Session Data  │
-│ • Sync Status   │    │ • Performance    │    │ • Rate Limiting │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-## Quick Start
-
-### 🚀 One-Command Deployment
+### Automated Installation (GenAI Agent Compatible)
 
 ```bash
-# Automated deployment script
-./deploy.sh          # Manual deployment
-./deploy.sh docker   # Docker deployment
-```
+# 1. Clone and setup
+git clone <repository_url> ai-foodflow
+cd ai-foodflow
 
-### 1. Environment Setup
-
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your API credentials (see Platform Integration section for how to obtain)
-# OPENAI_API_KEY=your_openai_api_key
-# DATABASE_URL=postgresql://user:password@localhost:5432/foodflow
-# REDIS_URL=redis://localhost:6379/0
-# UBER_EATS_CLIENT_ID=your_client_id
-# UBER_EATS_CLIENT_SECRET=your_client_secret
-# UBER_EATS_STORE_ID=your_store_id
-# DELIVEROO_API_KEY=your_api_key
-# DELIVEROO_RESTAURANT_ID=your_restaurant_id
-# JUST_EAT_API_KEY=your_api_key
-# JUST_EAT_TENANT_ID=your_tenant_id
-# SECRET_KEY=your_secret_key_here
-# RESTAURANT_NAME=Le Bouzou
-# RESTAURANT_LOCATION=Montpellier/Castelnau-le-Lez
-```
-
-### 2. Docker Deployment (Recommended)
-
-```bash
-# Automated Docker deployment
+# 2. One-command deployment
 ./deploy.sh docker
 
-# Or manual Docker commands:
-docker-compose up -d
-docker-compose exec app python scripts/init_data.py
+# 3. Verify installation
+curl http://localhost:8000/health
 ```
 
-**Docker Services:**
-- **app**: Main FastAPI application
-- **scheduler**: Background sync scheduler
-- **mcp-server**: MCP server for AI integration
-- **db**: PostgreSQL database
-- **redis**: Redis cache
-- **prometheus**: Metrics collection
-- **grafana**: Monitoring dashboard
+### Environment Configuration
 
-### 3. Manual Setup
+Create `.env` file with required credentials:
 
 ```bash
-# Automated manual deployment
-./deploy.sh
+# Required for AI functionality
+OPENAI_API_KEY=your_openai_api_key
 
-# Or manual commands:
-pip install -r requirements.txt
-python scripts/init_data.py
-uvicorn app.api.main:app --host 0.0.0.0 --port 8000 &
-python -c "from app.services.scheduler import scheduler; scheduler.start()" &
+# Database (auto-configured in Docker)
+DATABASE_URL=postgresql://user:password@db:5432/foodflow
+REDIS_URL=redis://redis:6379/0
+
+# Platform API credentials (obtain from respective platforms)
+UBER_EATS_CLIENT_ID=your_client_id
+UBER_EATS_CLIENT_SECRET=your_client_secret
+UBER_EATS_STORE_ID=your_store_id
+DELIVEROO_API_KEY=your_api_key
+DELIVEROO_RESTAURANT_ID=your_restaurant_id
+JUST_EAT_API_KEY=your_api_key
+JUST_EAT_TENANT_ID=your_tenant_id
+
+# System configuration
+SECRET_KEY=generate_random_secret_key
+RESTAURANT_NAME=Your_Restaurant_Name
+RESTAURANT_LOCATION=Your_Location
 ```
 
-### 4. Stop Services
+### Service Endpoints
+
+- **API**: http://localhost:8000
+- **AI Chat**: http://localhost:8000/static/chat_discussion.html
+- **Menu Management**: http://localhost:8000/menu-management
+- **Health Check**: http://localhost:8000/health
+
+## AI Agent Integration
+
+### MCP Server (Model Context Protocol)
 
 ```bash
-# Docker deployment
-docker-compose down
-
-# Manual deployment
-./deploy.sh stop
-# Or kill processes using saved PIDs
-kill $(cat api.pid scheduler.pid)
+# Start MCP server for AI integration
+python start_mcp.py
 ```
 
-## API Endpoints
+### Available AI Tools
 
-### Restaurant Management
-- `POST /restaurants/` - Create restaurant
-- `GET /restaurants/` - List restaurants
-- `GET /restaurants/{id}` - Get restaurant details
-
-### Menu Management
-- `POST /menu-items/` - Create menu item
-- `GET /menu-items/{restaurant_id}` - Get menu items
-- `PUT /menu-items/{item_id}` - Update menu item
-- `DELETE /menu-items/{item_id}` - Delete menu item
-- **Web Interface**: http://localhost:8000/menu-management
-
-### MCP Tools (AI Integration)
 - `sync_to_platforms` - Sync menu to delivery platforms
 - `add_menu_item` - Add new menu items
 - `get_menu` - View current menu
 - `update_menu_item` - Update existing items
-- `analyze_menu_image` - AI menu analysis
-- `get_sync_status` - Check sync status
+- `analyze_menu_image` - AI menu analysis from images
+- `get_sync_status` - Check synchronization status
 
-### AI Chat Interface
-- `WebSocket /chat/ws/{restaurant_id}` - Real-time chat with AI
-- `POST /chat/message` - Send text message
-- `POST /chat/message-with-image` - Send message with image attachment
-- `POST /chat/add-items` - Add analyzed menu items
-- **Web Interface**: http://localhost:8000/static/chat_discussion.html
+### Natural Language Commands
 
-### Configuration Management
-- `GET /config/credentials` - View API credentials (masked)
-- `POST /config/credentials` - Update API credentials
-- `GET /config/status` - Check configuration status
+```
+"Add pizza margherita for €12.50 to the menu"
+"Sync menu to all platforms"
+"Update item 5 price to €15.00"
+"Analyze this menu image"
+"Show current menu status"
+```
 
-### Audit & Monitoring
-- `GET /audit/history` - View action history
-- `GET /audit/stats` - Get performance statistics
-- `GET /health` - Health check
-- `POST /scheduler/start` - Start scheduler
-- `POST /scheduler/stop` - Stop scheduler
-- **Web Interface**: http://localhost:8000/audit-page
+## Platform Credentials Setup
 
-### Synchronization
-- `POST /sync/manual` - Trigger manual sync
-- `GET /sync/status/{restaurant_id}` - Get sync status
-- `POST /sync/restaurant-info` - Sync restaurant info
+### Required API Credentials
 
-## Platform Integration & Credentials
+**Uber Eats**: [developer.uber.com](https://developer.uber.com/)
+- `UBER_EATS_CLIENT_ID`
+- `UBER_EATS_CLIENT_SECRET` 
+- `UBER_EATS_STORE_ID`
 
-### Uber Eats
-**Getting Credentials:**
-1. Visit [Uber Eats Developer Portal](https://developer.uber.com/)
-2. Create developer account and register your restaurant
-3. Apply for Partner API access
-4. Get `CLIENT_ID`, `CLIENT_SECRET`, and `STORE_ID`
-5. Complete restaurant verification process
+**Deliveroo**: Contact partners@deliveroo.com
+- `DELIVEROO_API_KEY`
+- `DELIVEROO_RESTAURANT_ID`
 
-**Technical Details:**
-- Uses OAuth 2.0 authentication
-- JSON format for menu data
-- Specific category taxonomy required
+**Just Eat**: [partners.just-eat.com](https://partners.just-eat.com/)
+- `JUST_EAT_API_KEY`
+- `JUST_EAT_TENANT_ID`
 
-### Deliveroo
-**Getting Credentials:**
-1. Contact Deliveroo Partner Support at [partners@deliveroo.com](mailto:partners@deliveroo.com)
-2. Request API access for your restaurant
-3. Complete partner onboarding process
-4. Receive `API_KEY` and `RESTAURANT_ID`
-5. Sign API usage agreement
-
-**Technical Details:**
-- Bearer token authentication
-- XML/JSON format support
-- Different image aspect ratios
-
-### Just Eat
-**Getting Credentials:**
-1. Visit [Just Eat Partner Centre](https://partners.just-eat.com/)
-2. Register as restaurant partner
-3. Request API integration through account manager
-4. Get `API_KEY` and `TENANT_ID`
-5. Complete technical integration review
-
-**Technical Details:**
-- API key authentication
-- Platform-specific menu structure
-- Product-based categorization
-
-**Important Notes:**
-- All platforms require active restaurant partnerships
-- API access typically requires business verification
-- Some platforms have minimum order volume requirements
-- Integration approval can take 2-4 weeks
-
-## Sync Schedules
-
-- **Daily Sync**: 2:00 AM - Menu items and prices
-- **Weekly Sync**: Sunday 1:00 AM - Full restaurant info
-- **Hourly Sync**: Every hour - Availability status
-
-## MCP Integration (AI Systems)
-
-Use FoodFlow with any AI system via Model Context Protocol:
+### Verification Commands
 
 ```bash
-# Start MCP server
-python start_mcp.py
+# Check system health
+curl http://localhost:8000/health
 
-# Configure AI client (Claude, ChatGPT, etc.)
-# Add mcp_config.json to client configuration
+# Verify AI integration
+curl http://localhost:8000/config/status
+
+# Test MCP server
+python -c "import requests; print(requests.get('http://localhost:8000/health').json())"
 ```
 
-**Natural Language Commands:**
-- "Add a new pizza to Le Bouzou's menu for €12.50"
-- "Sync the menu to Uber Eats and Deliveroo"
-- "Show me the current menu"
-- "Update item 5's price to €15.00"
-- "Check sync status for restaurant 1"
+## Troubleshooting
 
-**Supported AI Clients:**
-- Claude Desktop
-- ChatGPT (via MCP plugin)
-- Custom AI applications
-- Any MCP-compatible system
-
-## Web Interfaces
-
-### Main Dashboard
-- **URL**: http://localhost:8000/main
-- **Features**: Central hub with system status, quick actions, and access to all features
-
-### AI Chat Interface
-- **URL**: http://localhost:8000/static/chat_discussion.html
-- **Features**: 
-  - Natural language menu management
-  - Drag & drop image upload and analysis
-  - Platform sync commands
-  - Real-time responses
-  - Interactive suggestions
-  - Action buttons for quick operations
-  - Menu item visualization
-  - Sync result tracking
-
-### Menu Management
-- **URL**: http://localhost:8000/menu-management
-- **Features**:
-  - Add, edit, delete menu items
-  - Category management
-  - Price and availability control
-  - Visual menu grid layout
-
-### Audit Records
-- **URL**: http://localhost:8000/audit-page
-- **Features**:
-  - Complete audit trail
-  - Filtering and search
-  - Export to CSV
-  - Performance statistics
-
-## Monitoring & Health Checks
-
-Access monitoring dashboards:
-- **Main Dashboard**: http://localhost:8000/main
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
-- **Prometheus Metrics**: http://localhost:9090
-- **Grafana Dashboard**: http://localhost:3000 (admin/admin)
-- **Database**: PostgreSQL on port 5432
-- **Redis Cache**: Redis on port 6379
-
-## Development
-
-### Project Structure
-```
-FoodFlow/
-├── app/
-│   ├── api/           # FastAPI endpoints (main, chat, config, audit, bot, websocket)
-│   ├── core/          # Database configuration & initialization
-│   ├── models/        # SQLAlchemy models (restaurant, config, audit)
-│   ├── services/      # Business logic (sync, AI, config, audit, menu_scanner)
-│   └── utils/         # Utilities (image processing)
-├── config/            # Configuration files (prometheus.yml)
-├── scripts/           # Initialization scripts (init_data.py)
-├── deploy.sh          # Automated deployment script
-├── docker-compose.yml # Multi-service Docker configuration
-├── Dockerfile         # Main application container
-├── Dockerfile.mcp     # MCP server container
-├── mcp_server.py      # MCP server for AI integration
-├── start_mcp.py       # MCP server startup script
-├── mcp_config.json    # MCP client configuration
-├── main_ai_foodflow.html  # Main dashboard interface
-├── chat_discussion.html   # Interactive web chat interface
-├── menu_management.html   # Menu management interface
-├── audit_page.html        # Audit records interface
-├── .env.example       # Environment template
-├── README_MCP.md      # MCP integration guide
-└── requirements.txt   # Python dependencies
-```
-
-### Adding New Platforms
-
-1. Create adapter in `app/services/platform_adapters.py`
-2. Implement `PlatformAdapter` interface
-3. Add to `SyncService.platforms` dictionary
-4. Update environment variables
-
-## Configuration Management
-
-FoodFlow automatically manages API credentials:
-
-**Priority System:**
-1. Environment variables (highest priority)
-2. Database storage (fallback)
-
-**Features:**
-- Automatic sync of env vars to database on startup
-- Secure credential storage with masking
-- Configuration API for runtime updates
-- Fallback system ensures availability
-
-## Audit System
-
-Complete tracking of all platform operations:
-
-**Tracked Actions:**
-- Platform synchronizations (success/failure)
-- Menu operations (add, update, delete)
-- Configuration changes
-- AI interactions and image analysis
-- System events and errors
-
-**Query Examples:**
 ```bash
-# Get sync history
-GET /audit/history?action_type=platform_sync&days=7
+# View logs
+docker-compose logs app
 
-# Get performance stats
-GET /audit/stats?days=30
+# Restart services
+docker-compose restart
+
+# Reset database
+docker-compose down -v && docker-compose up -d
 ```
-
-## Success Metrics
-
-- ✅ Sync accuracy rate >99%
-- ✅ Automated daily updates
-- ✅ Error rate <1%
-- ✅ Platform consistency
-- ✅ Real-time monitoring
-- ✅ MCP AI integration
-- ✅ Complete audit trail
-- ✅ Secure credential management
-- ✅ Natural language interface
-- ✅ One-command deployment
-- ✅ Multi-container architecture
-- ✅ Interactive web chat
-- ✅ Image upload & analysis
-- ✅ Health checks & metrics
-- ✅ Redis caching
-- ✅ Background scheduling
-
-## Support
-
-For support:
-- Email: lepetre@yahoo.fr
-- Phone: +33 6 XX XX XX XX
-- Location: Montpellier
