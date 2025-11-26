@@ -2,8 +2,8 @@
 """Initialize Le Bouzou restaurant data"""
 
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal, create_tables
-from app.models.restaurant import Restaurant, MenuItem
+from src.app.core.database import SessionLocal, create_tables
+from src.app.models.restaurant import Restaurant, MenuItem
 
 def init_le_bouzou_data():
     """Initialize Le Bouzou restaurant with sample menu items"""

@@ -20,4 +20,4 @@ ENV PYTHONPATH=/app
 ENV DATABASE_URL=postgresql://foodflow:password@db:5432/foodflow
 
 # MCP server command
-CMD ["python", "start_mcp.py"]
+CMD ["python", "src/start_mcp.py"]

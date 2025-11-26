@@ -8,11 +8,11 @@ from typing import Any, Dict, List, Optional
 from mcp.server import Server
 from mcp.types import Tool, TextContent, ImageContent
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal, create_tables
-from app.services.sync_service import SyncService
-from app.services.ai_bot import RestaurantAIBot
-from app.models.restaurant import Restaurant, MenuItem
-from app.core.logging_config import setup_logging
+from src.app.core.database import SessionLocal, create_tables
+from src.app.services.sync_service import SyncService
+from src.app.services.ai_bot import RestaurantAIBot
+from src.app.models.restaurant import Restaurant, MenuItem
+from src.app.core.logging_config import setup_logging
 import base64
 
 # Configure logging with datetime stamps

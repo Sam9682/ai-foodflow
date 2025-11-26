@@ -114,22 +114,22 @@ async def root():
 @app.get("/main")
 async def main_dashboard():
     """Serve the main FoodFlow dashboard"""
-    return FileResponse("main_ai_foodflow.html")
+    return FileResponse("src/templates/main_ai_foodflow.html")
 
 @app.get("/audit-page")
 async def audit_page():
     """Serve the audit records page"""
-    return FileResponse("audit_page.html")
+    return FileResponse("src/templates/audit_page.html")
 
 @app.get("/menu-management")
 async def menu_management():
     """Serve the menu management page"""
-    return FileResponse("menu_management.html")
+    return FileResponse("src/templates/menu_management.html")
 
 @app.get("/configuration")
 async def configuration_page():
     """Serve the configuration management page"""
-    return FileResponse("configuration.html")
+    return FileResponse("src/templates/configuration.html")
 
 @app.post("/restaurants/")
 async def create_restaurant(restaurant: RestaurantCreate, db: Session = Depends(get_db)):
