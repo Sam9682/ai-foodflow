@@ -20,7 +20,7 @@ COPY . .
 RUN mkdir -p /app/logs /app/images /tmp
 
 # Set environment variables
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src
 ENV DATABASE_URL=postgresql://foodflow:password@db:5432/foodflow
 ENV REDIS_URL=redis://redis:6379/0
 
@@ -32,4 +32,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${HTTPS_PORT:-6999}/health || exit 1
 
 # Default command (FastAPI server with SSL support)
-CMD uvicorn src.app.api.main:app --host 0.0.0.0 --port ${HTTPS_PORT:-6999} --ssl-keyfile=${SSL_KEYFILE:-} --ssl-certfile=${SSL_CERTFILE:-} --reload
+CMD uvicorn app.api.main:app --host 0.0.0.0 --port ${HTTPS_PORT:-6999} --ssl-keyfile=${SSL_KEYFILE:-} --ssl-certfile=${SSL_CERTFILE:-} --reload

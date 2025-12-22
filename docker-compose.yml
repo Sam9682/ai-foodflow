@@ -21,7 +21,7 @@ services:
       - redis
     volumes:
       - .:/app
-    command: uvicorn src.app.api.main:app --host 0.0.0.0 --port ${PORT:-8200} --reload
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port ${PORT:-8200} --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8200}/health"]
       interval: 30s
@@ -59,7 +59,7 @@ services:
       - redis
     volumes:
       - .:/app
-    command: python -c "from src.app.services.scheduler import scheduler; scheduler.start()"
+    command: python -c "from app.services.scheduler import scheduler; scheduler.start()"
     container_name: ai-foodflow-scheduler-${USER_ID:-1}
 
   mcp-server:
