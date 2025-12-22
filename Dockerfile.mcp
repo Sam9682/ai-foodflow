@@ -2,6 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Set environment variables to prevent debconf errors
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
