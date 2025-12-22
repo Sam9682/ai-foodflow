@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - "${PORT:-8200}:8200"
+      - "${HTTP_PORT:-9000}:8200"
     environment:
       - DATABASE_URL=postgresql://foodflow:password@db:5432/foodflow
       - REDIS_URL=redis://redis:6379/0
@@ -21,13 +21,13 @@ services:
       - redis
     volumes:
       - .:/app
-    command: uvicorn app.api.main:app --host 0.0.0.0 --port ${PORT:-8200} --reload
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port ${HTTP_PORT:-9000} --reload
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8200}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${HTTP_PORT:-9000}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-    container_name: ai-foodflow-app-${USER_ID:-1}
+    container_name: ai-foodflow-app-${USER_ID:-1}-${HTTPS_PORT:-9000}
 
   db:
     image: postgres:15
@@ -38,8 +38,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "8201:5432"
-    container_name: ai-foodflow-db-${USER_ID:-1}
+      - "${HTTP_PORT2:-9001}:5432"
+    container_name: ai-foodflow-db-${USER_ID:-1}-${HTTP_PORT2:-9001}
 
   redis:
     image: redis:7-alpine
@@ -47,7 +47,7 @@ services:
       - "8202:6379"
     volumes:
       - redis_data:/data
-    container_name: ai-foodflow-redis-${USER_ID:-1}
+    container_name: ai-foodflow-redis-${USER_ID:-1}-${HTTPS_PORT:-9002}
 
   scheduler:
     build: .
@@ -60,7 +60,7 @@ services:
     volumes:
       - .:/app
     command: python -c "from app.services.scheduler import scheduler; scheduler.start()"
-    container_name: ai-foodflow-scheduler-${USER_ID:-1}
+    container_name: ai-foodflow-scheduler-${USER_ID:-1}-${HTTPS_PORT:-9003}
 
   mcp-server:
     build:
@@ -82,7 +82,7 @@ services:
       - .:/app
     stdin_open: true
     tty: true
-    container_name: ai-foodflow-mcp-${USER_ID:-1}
+    container_name: ai-foodflow-mcp-${USER_ID:-1}-${HTTPS_PORT:-9004}
 
   prometheus:
     image: prom/prometheus:latest
@@ -93,7 +93,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-    container_name: ai-foodflow-prometheus-${USER_ID:-1}
+    container_name: ai-foodflow-prometheus-${USER_ID:-1}-${HTTPS_PORT:-9005}
 
   grafana:
     image: grafana/grafana:latest
@@ -103,7 +103,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana_data:/var/lib/grafana
-    container_name: ai-foodflow-grafana-${USER_ID:-1}
+    container_name: ai-foodflow-grafana-${USER_ID:-1}-${HTTPS_PORT:-9006}
 
 volumes:
   postgres_data:
